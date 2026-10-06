@@ -164,6 +164,10 @@ function Sidebar({
                 </button>
 
             </div>
+
+            {collapsed && (
+                <div></div>
+            )}
             
         </aside>
 
