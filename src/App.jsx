@@ -1,11 +1,11 @@
-import 'src/components/layout/AppLayout.css'
+import "src/components/layout/Sidebar.jsx"
 
 function App() {
   
 
   return (
     <>
-      
+      <Sidebar />
     </>
   )
 }
