@@ -166,6 +166,7 @@ function Sidebar({
             </div>
 
             {collapsed && (
+
                 <div className="sidebar__business-unit">
 
                     <span className="sidebar___selection-label">UNIT USAHA</span>
@@ -196,8 +197,11 @@ function Sidebar({
                     </button>
 
                     {showBusinessUnits && (
+
                         <div className="business-unit-dropdown">
+
                             {businessUnits.map((unit) => (
+                                
                                 <button
                                 type="button"
                                 key={unit.id}
@@ -211,11 +215,85 @@ function Sidebar({
                                     <span className="business-unit-option__dot" />
                                     <span>{unit.name}</span>
                                 </button>
-                            ))
+
+                            ))}
+
+                        </div>
+
                     )}
 
                 </div>
+
             )}
+
+            <nav className="sidebar__navigation">
+                <span className="sidebar__selection-label">
+                    {!collapsed && "MENU UTAMA"}
+                </span>
+
+                <div className="sidebar__menu">
+                    {navigationItems.map((item) => {
+                        const Icon = item.icon
+                        const isActive = activeItem === item.id
+
+                        return (
+                            <button
+                            type="button"
+                            key={item.id}
+                             className={`sidebar__menu-item ${
+                            isActive ? "sidebar__menu-item--active" : ""
+                        }`}
+                            onClick={() => handleNavigation(item.id)}
+                            title={collapsed ? item.label : undefined}
+                            >
+                                <span className="sidebar__menu-icon">
+                                    <Icon size={19} strokeWidth={2} />
+                                </span>
+
+                                {!collapsed && (
+
+                                    <>
+                                        <span className="sidebar__menu-label">
+                                            {item.label}
+                                        </span>
+
+                                        {item.badge && (
+                                            <span className="sidebar__menu-badge">
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                    </>
+
+                                )}
+
+                            </button>
+                        )
+
+                    })}
+
+                </div>
+
+            </nav>
+
+            <div className="sidebar__bottom">
+
+                {!collapsed && (
+                    
+                    <div className="sidebar__notification">
+                        <div className="sidebar__notification-icon">
+                            <Bell size={17} />
+                        </div>
+
+                        <div className="sidebar__notification-content">
+                            <strong>Notifikasi</strong>
+                            <span>3 perlu perhatian</span>
+                        </div>
+
+                        <span className="sidebar__notification-badge">3</span>
+                    </div>
+                )}
+
+            </div>
             
         </aside>
 
