@@ -278,7 +278,7 @@ function Sidebar({
             <div className="sidebar__bottom">
 
                 {!collapsed && (
-                    
+
                     <div className="sidebar__notification">
                         <div className="sidebar__notification-icon">
                             <Bell size={17} />
@@ -292,6 +292,30 @@ function Sidebar({
                         <span className="sidebar__notification-badge">3</span>
                     </div>
                 )}
+
+                <div className="sidebar__profile">
+
+                    <div className="sidebar-avatar">
+                        <span>AD</span>
+                    </div>
+
+                    {!collapsed && (
+
+                        <>
+                        <div className="sidebar__profile-info">
+                            <strong>Admin</strong>
+                            <span>Supper Summer</span>
+                        </div>
+
+                        <CircleUserRound
+                        size={18}
+                        className="sidebar__profile-icon"
+                        />
+                        </>
+                        
+                    )}
+
+                </div>
 
             </div>
             
