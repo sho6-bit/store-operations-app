@@ -166,7 +166,55 @@ function Sidebar({
             </div>
 
             {collapsed && (
-                <div></div>
+                <div className="sidebar__business-unit">
+
+                    <span className="sidebar___selection-label">UNIT USAHA</span>
+                    
+                    <button
+                        type="button"
+                        className="business-unit-selector"
+                        onClick={() => setShowBusinessUnits(!showBusinessUnits)}
+                    >
+                        <div className="business-unit-selector__icon">
+                            <div className="business-unit-dot" />
+                        </div>
+
+                        <div className="business-unit-selector__content">
+                            <span>Unit Aktif</span>
+                            <strong>{currentBusinessUnit.name}</strong>
+                        </div>
+
+                        <ChevronDown
+                        size={16}
+                        className={
+                            showBusinessUnits
+                            ? "business-unit-selector_arrow business-unit-selector_arrow--open"
+                            : "business-unit-selector__arrow"
+                        }
+                        />
+                    
+                    </button>
+
+                    {showBusinessUnits && (
+                        <div className="business-unit-dropdown">
+                            {businessUnits.map((unit) => (
+                                <button
+                                type="button"
+                                key={unit.id}
+                                className={`business-unit-option ${
+                                    selectedBusinessUnit === unit.id
+                                    ? "business-unit-option-active"
+                                    : ""
+                                }`}
+                                onClick={() => handleBusinessUnitChange(unit.id)}
+                                >
+                                    <span className="business-unit-option__dot" />
+                                    <span>{unit.name}</span>
+                                </button>
+                            ))
+                    )}
+
+                </div>
             )}
             
         </aside>
