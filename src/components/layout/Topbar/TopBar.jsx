@@ -20,7 +20,7 @@ function TopBar({
 
     userName = "Admin",
     userRole = "Administrator",
-    userInitials = "AD",
+    userInitials = "TN",
     onProfileClick,
 
     isDarkMode = false,
