@@ -16,7 +16,7 @@ import {
     CircleUseRound,
 } from "lucide-react"
 
-import "src/components/layout/Sidebar/sidebar.css"
+import "./sidebar.css"
 
 const navigationItems = [
 
@@ -159,7 +159,7 @@ function Sidebar({
                     {collapsed ? (
                         <ChevronRight size={18} />
                     ) : (
-                        <ChevronRight size={18} />
+                        <ChevronLeft size={18} />
                     )}
                 </button>
 
@@ -307,7 +307,7 @@ function Sidebar({
                             <span>Supper Summer</span>
                         </div>
 
-                        <CircleUserRound
+                        <CircleUseRound
                         size={18}
                         className="sidebar__profile-icon"
                         />
