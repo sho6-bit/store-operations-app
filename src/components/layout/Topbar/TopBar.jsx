@@ -6,7 +6,7 @@ import {
     ChevronDown,
 } from "lucide-react"
 
-import "./TopBar.css"
+import "./topBar.css"
 
 function TopBar({
     title = "Dashboard",

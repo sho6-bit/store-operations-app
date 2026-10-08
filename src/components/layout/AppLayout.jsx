@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import "./AppLayout.css"
+import "./appLayout.css"
 
 import Sidebar from "./Sidebar/Sidebar.jsx"
 import TopBar from "./Topbar/TopBar.jsx"

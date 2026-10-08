@@ -1,7 +1,7 @@
 import { useState } from "react"
 import {
     LayoutDashboard,
-    ShoppingCard,
+    ShoppingCart,
     ShoppingBag,
     Package,
     User,
@@ -13,7 +13,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Bell,
-    CircleUseRound,
+    CircleUserRound,
 } from "lucide-react"
 
 import "./sidebar.css"
@@ -29,7 +29,7 @@ const navigationItems = [
     {
         id: "sales",
         label: "Penjualan",
-        icon: ShoppingCard,
+        icon: ShoppingCart,
     },
 
     {
@@ -165,11 +165,11 @@ function Sidebar({
 
             </div>
 
-            {collapsed && (
+            {!collapsed && (
 
                 <div className="sidebar__business-unit">
 
-                    <span className="sidebar___selection-label">UNIT USAHA</span>
+                    <span className="sidebar__selection-label">UNIT USAHA</span>
                     
                     <button
                         type="button"
@@ -189,7 +189,7 @@ function Sidebar({
                         size={16}
                         className={
                             showBusinessUnits
-                            ? "business-unit-selector_arrow business-unit-selector_arrow--open"
+                            ? "business-unit-selector__arrow business-unit-selector__arrow--open"
                             : "business-unit-selector__arrow"
                         }
                         />
@@ -296,7 +296,7 @@ function Sidebar({
                 <div className="sidebar__profile">
 
                     <div className="sidebar-avatar">
-                        <span>AD</span>
+                        <span>TN</span>
                     </div>
 
                     {!collapsed && (
@@ -307,7 +307,7 @@ function Sidebar({
                             <span>Supper Summer</span>
                         </div>
 
-                        <CircleUseRound
+                        <CircleUserRound
                         size={18}
                         className="sidebar__profile-icon"
                         />
@@ -324,3 +324,5 @@ function Sidebar({
 
     )
 }
+
+export default Sidebar
