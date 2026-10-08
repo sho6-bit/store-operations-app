@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 
 import SearchInput from "../../components/common/SearchInput"
+import SummaryCards from "../../components/common/SummaryCards"
 import "./purchasesPage.css"
 
 function formatCurrency(value) {
@@ -16,6 +17,11 @@ function formatCurrency(value) {
 function PurchasesPage({ data = [] }) {
   const [searchTerm, setSearchTerm] = useState("")
   const purchases = Array.isArray(data) ? data : []
+  const totalPurchases = purchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
+  const pendingPurchases = purchases.filter((purchase) =>
+    ["menunggu", "pending", "belum lunas"].includes(String(purchase.status || "").trim().toLowerCase()),
+  )
+  const pendingTotal = pendingPurchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
 
   const filteredPurchases = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -39,6 +45,12 @@ function PurchasesPage({ data = [] }) {
           </p>
         </div>
       </header>
+
+      <SummaryCards cards={[
+        { label: "Total pembelian", value: purchases.length ? formatCurrency(totalPurchases) : "—", detail: "Total catatan yang tersedia", tone: "purple" },
+        { label: "Transaksi pembelian", value: purchases.length, detail: "Jumlah catatan pembelian", tone: "blue" },
+        { label: "Menunggu", value: pendingPurchases.length ? formatCurrency(pendingTotal) : "—", detail: pendingPurchases.length + " transaksi berstatus menunggu", tone: "orange" },
+      ]} />
 
       <section className="purchases-card" aria-label="Daftar pembelian">
         <div className="purchases-card__toolbar">
@@ -123,3 +135,4 @@ function PurchasesPage({ data = [] }) {
 }
 
 export default PurchasesPage
+

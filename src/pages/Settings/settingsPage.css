@@ -1,0 +1,67 @@
+.setting-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  color: #101828;
+}
+
+.setting-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.setting-page__eyebrow {
+  color: #6941c6;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.setting-page__title {
+  margin: 7px 0 5px;
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.setting-page__description {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.setting-card {
+  min-height: 280px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.setting-empty {
+  display: flex;
+  min-height: 280px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px;
+  text-align: center;
+}
+
+.setting-empty strong {
+  color: #344054;
+  font-size: 14px;
+}
+
+.setting-empty span {
+  max-width: 420px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}

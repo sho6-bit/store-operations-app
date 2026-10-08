@@ -4,6 +4,7 @@ import { Pencil, Plus, Trash2, Users } from "lucide-react"
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
 import SearchInput from "../../components/common/SearchInput"
+import SummaryCards from "../../components/common/SummaryCards"
 
 import "./customersPage.css"
 
@@ -29,6 +30,8 @@ function CustomerPage({
   const [actionError, setActionError] = useState("")
 
   const customers = Array.isArray(data) ? data : []
+  const customersWithPhone = customers.filter((customer) => customer.phone).length
+  const customersWithEmail = customers.filter((customer) => customer.email).length
 
   const filteredCustomers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -151,6 +154,12 @@ function CustomerPage({
           Tambah pelanggan
         </Button>
       </header>
+
+      <SummaryCards cards={[
+        { label: "Pelanggan terdaftar", value: customers.length, detail: "Jumlah data pelanggan", tone: "blue" },
+        { label: "Memiliki nomor telepon", value: customersWithPhone, detail: "Berdasarkan data kontak", tone: "green" },
+        { label: "Memiliki email", value: customersWithEmail, detail: "Berdasarkan data kontak", tone: "purple" },
+      ]} />
 
       <section className="customer-card" aria-label="Daftar pelanggan">
         <div className="customer-card__toolbar">
@@ -321,3 +330,4 @@ function CustomerPage({
 }
 
 export default CustomerPage
+

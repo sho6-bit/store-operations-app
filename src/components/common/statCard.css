@@ -1,12 +1,13 @@
 .common-stat-card {
   min-width: 0;
   padding: 20px;
-  background: #fff;
-  border: 1px solid #eaecf0;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: var(--shadow-xs);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
-
 .common-stat-card__icon {
   display: grid;
   width: 40px;
@@ -14,71 +15,33 @@
   place-items: center;
   border-radius: 11px;
 }
-
 .common-stat-card__icon--purple {
-  color: #6941c6;
-  background: #f4ebff;
+  color: #8b5cf6;
+  background: color-mix(in srgb, #8b5cf6 13%, var(--color-surface));
 }
-
-.common-stat-card__icon--green {
-  color: #039855;
-  background: #ecfdf3;
-}
-
-.common-stat-card__icon--orange {
-  color: #dc6803;
-  background: #fff6ed;
-}
-
-.common-stat-card__icon--blue {
-  color: #1570ef;
-  background: #eff8ff;
-}
-
-.common-stat-card__label {
-  margin: 17px 0 7px;
-  color: #667085;
-  font-size: 13px;
-}
-
-.common-stat-card__value-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
+.common-stat-card__icon--green { color: var(--color-success); background: var(--color-success-soft); }
+.common-stat-card__icon--orange { color: var(--color-warning); background: var(--color-warning-soft); }
+.common-stat-card__icon--blue { color: var(--color-primary); background: var(--color-primary-soft); }
+.common-stat-card__label { margin: 17px 0 7px; color: var(--color-text-secondary); font-size: 13px; }
+.common-stat-card__value-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .common-stat-card__value {
   overflow: hidden;
-  color: #101828;
+  color: var(--color-text-primary);
   font-size: clamp(20px, 2vw, 25px);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -.03em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .common-stat-card__footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin: 12px 0 0;
-  color: #667085;
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
-
-.common-stat-card__change {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-weight: 600;
-}
-
-.common-stat-card__change--up {
-  color: #039855;
-}
-
-.common-stat-card__change--down {
-  color: #d92d20;
-}
+.common-stat-card__change { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; }
+.common-stat-card__change--up { color: var(--color-success); }
+.common-stat-card__change--down { color: var(--color-danger); }

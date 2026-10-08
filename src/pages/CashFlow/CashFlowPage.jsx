@@ -1,23 +1,17 @@
 import { useMemo, useState } from "react"
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  CircleDollarSign,
-  Wallet,
-} from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, Landmark, Wallet } from "lucide-react"
 
-import Button from "../../components/common/Button"
-import Modal from "../../components/common/Modal"
 import SearchInput from "../../components/common/SearchInput"
-import StatCard from "../../components/common/StatCard"
-
 import "./cashFlowPage.css"
 
-function formatCurrency(value) {
-  if (value === null || value === undefined) {
-    return "—"
-  }
+const businessUnits = [
+  { id: "furniture", name: "Furniture" },
+  { id: "electronic-1", name: "Electronic 1" },
+  { id: "electronic-2", name: "Electronic 2" },
+]
 
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === "") return "—"
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
@@ -28,111 +22,109 @@ function formatCurrency(value) {
 function CashFlowPage({ data = {} }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
-  const [isModalOpen, setIsModalOpen] = useState(false)
-
-  const {
-    summary = {},
-    transactions = [],
-  } = data
-
-  const {
-    balance = null,
-    income = null,
-    expense = null,
-    netCashFlow = null,
-  } = summary
+  const summary = data?.summary ?? {}
+  const transactions = Array.isArray(data?.transactions) ? data.transactions : []
+  const accounts = Array.isArray(data?.accounts) ? data.accounts : []
 
   const filteredTransactions = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
-
     return transactions.filter((transaction) => {
-      const matchesType =
-        typeFilter === "all" || transaction.type === typeFilter
-
-      const matchesSearch =
-        !query ||
-        [
-          transaction.description,
-          transaction.category,
-          transaction.account,
-          transaction.reference,
-        ]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(query))
-
+      const matchesType = typeFilter === "all" || transaction.type === typeFilter
+      const matchesSearch = !query || [
+        transaction.description,
+        transaction.category,
+        transaction.account,
+        transaction.reference,
+      ].filter(Boolean).some((value) => String(value).toLowerCase().includes(query))
       return matchesType && matchesSearch
     })
   }, [transactions, searchTerm, typeFilter])
+
+  function getAccount(unitId, accountType) {
+    return accounts.find((account) =>
+      (account.businessUnit === unitId || account.businessUnitId === unitId) &&
+      account.type === accountType
+    )
+  }
 
   return (
     <section className="cash-flow-page">
       <header className="cash-flow-page__header">
         <div>
-          <span className="cash-flow-page__eyebrow">Keuangan</span>
+          <span className="cash-flow-page__eyebrow">KEUANGAN</span>
           <h1 className="cash-flow-page__title">Kas &amp; Bank</h1>
           <p className="cash-flow-page__description">
-            Pantau saldo, pemasukan, dan pengeluaran tokomu.
+            Ringkasan saldo dan pergerakan dana seluruh unit usaha.
           </p>
         </div>
-
-        <Button onClick={() => setIsModalOpen(true)}>
-          <span aria-hidden="true">＋</span>
-          Catat transaksi
-        </Button>
       </header>
 
-      <div className="cash-flow-page__summary">
-        <StatCard
-          label="Saldo kas & bank"
-          value={formatCurrency(balance)}
-          detail="Saldo saat ini"
-          icon={Wallet}
-          tone="purple"
-        />
-        <StatCard
-          label="Kas masuk"
-          value={formatCurrency(income)}
-          detail="Periode berjalan"
-          icon={ArrowDownLeft}
-          tone="green"
-        />
-        <StatCard
-          label="Kas keluar"
-          value={formatCurrency(expense)}
-          detail="Periode berjalan"
-          icon={ArrowUpRight}
-          tone="orange"
-        />
-        <StatCard
-          label="Arus kas bersih"
-          value={formatCurrency(netCashFlow)}
-          detail="Pemasukan dikurangi pengeluaran"
-          icon={CircleDollarSign}
-          tone="blue"
-        />
-      </div>
+      <section className="cash-flow-total" aria-label="Ringkasan saldo kas dan bank">
+        <div>
+          <span className="cash-flow-total__label">Total saldo seluruh akun</span>
+          <strong className="cash-flow-total__value">
+            {formatCurrency(summary.balance)}
+          </strong>
+          <span className="cash-flow-total__caption">
+            {summary.asOf ? "Per " + summary.asOf : "Saldo gabungan akun kas dan bank"}
+          </span>
+        </div>
+      </section>
+
+      <section className="cash-flow-accounts" aria-label="Saldo akun per unit usaha">
+        {businessUnits.flatMap((unit) =>
+          [
+            { type: "cash", label: "Kas", icon: Wallet },
+            { type: "bank", label: "Bank", icon: Landmark },
+          ].map((kind) => {
+            const account = getAccount(unit.id, kind.type)
+            const Icon = kind.icon
+            return (
+              <article className="cash-account-card" key={unit.id + "-" + kind.type}>
+                <div className="cash-account-card__top">
+                  <span className={"cash-account-card__icon cash-account-card__icon--" + kind.type}>
+                    <Icon size={19} aria-hidden="true" />
+                  </span>
+                  <span className="cash-account-card__unit">{unit.name}</span>
+                </div>
+                <span className="cash-account-card__name">
+                  {account?.name || kind.label + " " + unit.name}
+                </span>
+                <strong className="cash-account-card__balance">
+                  {formatCurrency(account?.balance)}
+                </strong>
+                <div className="cash-account-card__movement">
+                  <div>
+                    <span><ArrowDownLeft size={14} /> Masuk hari ini</span>
+                    <strong className="is-positive">{formatCurrency(account?.todayIncome)}</strong>
+                  </div>
+                  <div>
+                    <span><ArrowUpRight size={14} /> Keluar hari ini</span>
+                    <strong className="is-negative">{formatCurrency(account?.todayExpense)}</strong>
+                  </div>
+                </div>
+              </article>
+            )
+          }),
+        )}
+      </section>
 
       <article className="cash-flow-card">
         <div className="cash-flow-card__header">
           <div>
-            <h2>Riwayat transaksi</h2>
-            <p>Daftar kas masuk dan kas keluar.</p>
+            <h2>Mutasi kas dan bank</h2>
+            <p>Catatan pergerakan dana dari seluruh unit usaha.</p>
           </div>
-
           <div className="cash-flow-card__filters">
             <SearchInput
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Cari transaksi..."
-              ariaLabel="Cari transaksi kas"
+              ariaLabel="Cari transaksi kas dan bank"
             />
-
             <label className="cash-flow-select">
               <span className="sr-only">Filter jenis transaksi</span>
-              <select
-                value={typeFilter}
-                onChange={(event) => setTypeFilter(event.target.value)}
-              >
+              <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
                 <option value="all">Semua jenis</option>
                 <option value="income">Kas masuk</option>
                 <option value="expense">Kas keluar</option>
@@ -148,40 +140,24 @@ function CashFlowPage({ data = {} }) {
                 <tr>
                   <th>Tanggal</th>
                   <th>Deskripsi</th>
-                  <th>Kategori</th>
+                  <th>Unit Usaha</th>
                   <th>Akun</th>
                   <th>Jenis</th>
                   <th className="cash-flow-table__amount-heading">Jumlah</th>
                 </tr>
               </thead>
-
               <tbody>
                 {filteredTransactions.map((transaction) => (
                   <tr key={transaction.id}>
                     <td>{transaction.date || "—"}</td>
                     <td>
-                      <strong>{transaction.description || "Transaksi"}</strong>
-                      {transaction.reference && (
-                        <span className="cash-flow-table__reference">
-                          {transaction.reference}
-                        </span>
-                      )}
+                      <strong>{transaction.description || "—"}</strong>
+                      {transaction.reference && <span className="cash-flow-table__reference">{transaction.reference}</span>}
                     </td>
-                    <td>{transaction.category || "—"}</td>
+                    <td>{businessUnits.find((unit) => unit.id === transaction.businessUnit)?.name || transaction.businessUnit || "—"}</td>
                     <td>{transaction.account || "—"}</td>
-                    <td>
-                      <span
-                        className={`cash-flow-type cash-flow-type--${transaction.type}`}
-                      >
-                        {transaction.type === "income"
-                          ? "Kas masuk"
-                          : "Kas keluar"}
-                      </span>
-                    </td>
-                    <td
-                      className={`cash-flow-table__amount cash-flow-table__amount--${transaction.type}`}
-                    >
-                      {transaction.type === "expense" ? "−" : "+"}
+                    <td>{transaction.type === "income" ? "Kas masuk" : transaction.type === "expense" ? "Kas keluar" : "—"}</td>
+                    <td className={"cash-flow-table__amount cash-flow-table__amount--" + (transaction.type || "")}>
                       {formatCurrency(transaction.amount)}
                     </td>
                   </tr>
@@ -191,18 +167,11 @@ function CashFlowPage({ data = {} }) {
           </div>
         ) : (
           <div className="cash-flow-empty">
-            <div className="cash-flow-empty__icon" aria-hidden="true">
-              —
-            </div>
-            <strong>
-              {searchTerm || typeFilter !== "all"
-                ? "Transaksi tidak ditemukan"
-                : "Belum ada transaksi kas"}
-            </strong>
+            <strong>{searchTerm || typeFilter !== "all" ? "Transaksi tidak ditemukan" : "Belum ada mutasi kas dan bank"}</strong>
             <span>
               {searchTerm || typeFilter !== "all"
                 ? "Ubah kata kunci atau filter, lalu coba lagi."
-                : "Transaksi kas dan bank akan muncul di sini."}
+                : "Mutasi akan tampil di sini setelah data tersedia."}
             </span>
           </div>
         )}
@@ -211,29 +180,6 @@ function CashFlowPage({ data = {} }) {
           Menampilkan {filteredTransactions.length} dari {transactions.length} transaksi
         </footer>
       </article>
-
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Catat transaksi kas"
-        size="medium"
-      >
-        <p className="cash-flow-modal__description">
-          Form pencatatan transaksi dapat ditambahkan di bagian ini.
-        </p>
-
-        <div className="cash-flow-modal__actions">
-          <Button
-            variant="secondary"
-            onClick={() => setIsModalOpen(false)}
-          >
-            Batal
-          </Button>
-          <Button onClick={() => setIsModalOpen(false)}>
-            Selesai
-          </Button>
-        </div>
-      </Modal>
     </section>
   )
 }

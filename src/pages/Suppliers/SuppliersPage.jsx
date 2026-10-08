@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react"
 
 import SearchInput from "../../components/common/SearchInput"
+import SummaryCards from "../../components/common/SummaryCards"
 import "./suppliersPage.css"
 
 function SuppliersPage({ data = [] }) {
   const [searchTerm, setSearchTerm] = useState("")
   const suppliers = Array.isArray(data) ? data : []
+  const suppliersWithPhone = suppliers.filter((supplier) => supplier.phone).length
+  const suppliersWithEmail = suppliers.filter((supplier) => supplier.email).length
 
   const filteredSuppliers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -29,6 +32,12 @@ function SuppliersPage({ data = [] }) {
           </p>
         </div>
       </header>
+
+      <SummaryCards cards={[
+        { label: "Supplier terdaftar", value: suppliers.length, detail: "Jumlah data supplier", tone: "blue" },
+        { label: "Memiliki nomor telepon", value: suppliersWithPhone, detail: "Berdasarkan data kontak", tone: "green" },
+        { label: "Memiliki email", value: suppliersWithEmail, detail: "Berdasarkan data kontak", tone: "purple" },
+      ]} />
 
       <section className="suppliers-card" aria-label="Daftar supplier">
         <div className="suppliers-card__toolbar">
@@ -96,3 +105,4 @@ function SuppliersPage({ data = [] }) {
 }
 
 export default SuppliersPage
+

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 
 import SearchInput from "../../components/common/SearchInput"
+import SummaryCards from "../../components/common/SummaryCards"
 import "./salesPage.css"
 
 function formatCurrency(value) {
@@ -16,6 +17,11 @@ function formatCurrency(value) {
 function SalesPage({ data = [] }) {
   const [searchTerm, setSearchTerm] = useState("")
   const sales = Array.isArray(data) ? data : []
+  const totalSales = sales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
+  const unpaidSales = sales.filter((sale) =>
+    ["piutang", "belum lunas", "belum dibayar"].includes(String(sale.status || "").trim().toLowerCase()),
+  )
+  const unpaidTotal = unpaidSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
 
   const filteredSales = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -45,6 +51,12 @@ function SalesPage({ data = [] }) {
           </p>
         </div>
       </header>
+
+      <SummaryCards cards={[
+        { label: "Penjualan", value: sales.length ? formatCurrency(totalSales) : "—", detail: "Total transaksi yang tersedia", tone: "blue" },
+        { label: "Transaksi", value: sales.length, detail: "Jumlah catatan penjualan", tone: "purple" },
+        { label: "Piutang aktif", value: unpaidSales.length ? formatCurrency(unpaidTotal) : "—", detail: unpaidSales.length + " transaksi belum lunas", tone: "orange" },
+      ]} />
 
       <section className="sales-card" aria-label="Daftar penjualan">
         <div className="sales-card__toolbar">
@@ -131,3 +143,5 @@ function SalesPage({ data = [] }) {
 }
 
 export default SalesPage
+
+

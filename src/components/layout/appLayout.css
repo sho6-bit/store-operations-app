@@ -128,3 +128,74 @@
         padding-bottom: 88px;
     }
 }
+/* Theme-aware surfaces for page cards and search controls */
+[data-theme="dark"] .sales-card,
+[data-theme="dark"] .purchases-card,
+[data-theme="dark"] .inventory-card,
+[data-theme="dark"] .customer-card,
+[data-theme="dark"] .suppliers-card,
+[data-theme="dark"] .cash-flow-card,
+[data-theme="dark"] .reports-card,
+[data-theme="dark"] .setting-card {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+[data-theme="dark"] .common-search,
+[data-theme="dark"] .common-search__input {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+[data-theme="dark"] .sales-card__toolbar,
+[data-theme="dark"] .purchases-card__toolbar,
+[data-theme="dark"] .inventory-card__toolbar,
+[data-theme="dark"] .customer-card__toolbar,
+[data-theme="dark"] .suppliers-card__toolbar,
+[data-theme="dark"] .cash-flow-card__header,
+[data-theme="dark"] .reports-card__toolbar,
+[data-theme="dark"] .sales-card__footer,
+[data-theme="dark"] .purchases-card__footer,
+[data-theme="dark"] .inventory-card__footer,
+[data-theme="dark"] .customer-card__footer,
+[data-theme="dark"] .suppliers-card__footer,
+[data-theme="dark"] .cash-flow-card__footer,
+[data-theme="dark"] .reports-card__footer {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+[data-theme="dark"] .sales-table th,
+[data-theme="dark"] .purchases-table th,
+[data-theme="dark"] .inventory-table th,
+[data-theme="dark"] .customer-table th,
+[data-theme="dark"] .suppliers-table th,
+[data-theme="dark"] .cash-flow-table th,
+[data-theme="dark"] .reports-table th {
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+}
+[data-theme="dark"] .sales-table td,
+[data-theme="dark"] .purchases-table td,
+[data-theme="dark"] .inventory-table td,
+[data-theme="dark"] .customer-table td,
+[data-theme="dark"] .suppliers-table td,
+[data-theme="dark"] .cash-flow-table td,
+[data-theme="dark"] .reports-table td {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-light);
+}
+[data-theme="dark"] .sales-table td strong,
+[data-theme="dark"] .purchases-table td strong,
+[data-theme="dark"] .inventory-table td strong,
+[data-theme="dark"] .customer-table td strong,
+[data-theme="dark"] .suppliers-table td strong {
+  color: var(--color-text-primary);
+}
+[data-theme="dark"] .sales-table tbody tr:hover,
+[data-theme="dark"] .purchases-table tbody tr:hover,
+[data-theme="dark"] .inventory-table tbody tr:hover,
+[data-theme="dark"] .customer-table tbody tr:hover,
+[data-theme="dark"] .suppliers-table tbody tr:hover,
+[data-theme="dark"] .reports-table tbody tr:hover {
+  background: var(--color-surface-hover);
+}
