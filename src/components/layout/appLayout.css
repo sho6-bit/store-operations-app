@@ -1,0 +1,130 @@
+/* =========================================================
+   APP LAYOUT
+   Store Operations App
+========================================================= */
+
+.app-layout {
+    min-height: 100vh;
+
+    background: var(--color-background);
+
+    overflow-x: hidden;
+}
+
+
+/* =========================================================
+   MAIN AREA
+========================================================= */
+
+.app-layout__main {
+    min-height: 100vh;
+
+    margin-left: 334px;
+
+    display: flex;
+    flex-direction: column;
+
+    transition:
+        margin-left 220ms ease;
+}
+
+
+/* =========================================================
+   PAGE CONTENT
+========================================================= */
+
+.app-layout__content {
+    flex: 1;
+
+    min-width: 0;
+    min-height: calc(100vh - 72px);
+
+    padding: 28px 32px;
+
+    background: var(--color-background);
+}
+
+
+/* =========================================================
+   SIDEBAR COLLAPSED
+========================================================= */
+
+.app-layout--collapsed .app-layout__main {
+    margin-left: 76px;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+.app-layout--dark {
+    background: var(--color-background);
+}
+
+.app-layout--dark .app-layout__main {
+    background: var(--color-background);
+}
+
+.app-layout--dark .app-layout__content {
+    background: var(--color-background);
+}
+
+
+/* =========================================================
+   LARGE SCREEN
+========================================================= */
+
+@media (max-width: 1200px) {
+    .app-layout__main {
+        margin-left: 280px;
+    }
+
+    .app-layout--collapsed .app-layout__main {
+        margin-left: 76px;
+    }
+
+    .app-layout__content {
+        padding: 24px;
+    }
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .app-layout__main,
+    .app-layout--collapsed .app-layout__main {
+        margin-left: 76px;
+    }
+
+    .app-layout__content {
+        min-height: calc(100vh - 64px);
+
+        padding: 20px;
+    }
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+
+    .app-layout__main,
+    .app-layout--collapsed .app-layout__main {
+        margin-left: 0;
+    }
+
+    .app-layout__content {
+        min-height: calc(100vh - 64px);
+
+        padding: 16px;
+
+        padding-bottom: 88px;
+    }
+}
