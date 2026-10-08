@@ -1,347 +1,49 @@
-.dashboard-page {
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-}
-
-
-/* ========================================
-   HEADER
-======================================== */
-
-.dashboard-page__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-
-    margin-bottom: 24px;
-}
-
-.dashboard-page__eyebrow {
-    display: block;
-
-    margin-bottom: 6px;
-
-    color: var(--color-primary);
-
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.dashboard-page__title {
-    margin: 0;
-
-    color: var(--color-text);
-
-    font-size: 26px;
-    font-weight: 700;
-    line-height: 1.25;
-}
-
-.dashboard-page__description {
-    margin: 8px 0 0;
-
-    color: var(--color-text-secondary);
-
-    font-size: 14px;
-}
-
-.dashboard-page__context {
-    min-width: 180px;
-
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    padding: 12px 14px;
-
-    background: var(--color-surface);
-
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-}
-
-.dashboard-page__context span {
-    color: var(--color-text-secondary);
-
-    font-size: 11px;
-}
-
-.dashboard-page__context strong {
-    color: var(--color-text);
-
-    font-size: 13px;
-}
-
-
-/* ========================================
-   SUMMARY
-======================================== */
-
 .dashboard-page__summary {
-    display: grid;
-
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-
-    gap: 16px;
-
-    margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
 }
 
+.dashboard-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-/* ========================================
-   GRID
-======================================== */
+.dashboard-page__actions .common-search {
+  width: min(260px, 100%);
+}
 
-.dashboard-page__grid {
-    display: grid;
+.dashboard-card__header--actions {
+  align-items: center;
+  gap: 16px;
+}
 
+.dashboard-page__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+@media (max-width: 1000px) {
+  .dashboard-page__summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    gap: 16px;
+  }
 }
 
+@media (max-width: 640px) {
+  .dashboard-page__summary {
+    grid-template-columns: 1fr;
+  }
 
-/* ========================================
-   CARD
-======================================== */
-
-.dashboard-card {
-    min-width: 0;
-
-    padding: 20px;
-
-    background: var(--color-surface);
-
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
-}
-
-.dashboard-card--large {
-    min-height: 280px;
-}
-
-.dashboard-card--kpi {
-    min-height: 130px;
-
-    display: flex;
+  .dashboard-page__actions,
+  .dashboard-card__header--actions {
+    align-items: stretch;
     flex-direction: column;
-}
-
-.dashboard-card__label {
-    color: var(--color-text-secondary);
-
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.dashboard-card__value {
-    margin-top: 10px;
-
-    color: var(--color-text);
-
-    font-size: 23px;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-.dashboard-card__meta {
-    margin-top: auto;
-    padding-top: 12px;
-
-    color: var(--color-text-secondary);
-
-    font-size: 11px;
-}
-
-
-/* ========================================
-   CARD HEADER
-======================================== */
-
-.dashboard-card__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-
-    margin-bottom: 18px;
-}
-
-.dashboard-card__header h2 {
-    margin: 0;
-
-    color: var(--color-text);
-
-    font-size: 16px;
-    font-weight: 650;
-}
-
-.dashboard-card__header p {
-    margin: 5px 0 0;
-
-    color: var(--color-text-secondary);
-
-    font-size: 12px;
-}
-
-
-/* ========================================
-   DATA LIST
-======================================== */
-
-.dashboard-data-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.dashboard-data-row {
-    min-height: 52px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    gap: 16px;
-
-    padding: 10px 0;
-
-    border-bottom: 1px solid var(--color-border);
-}
-
-.dashboard-data-row:last-child {
-    border-bottom: none;
-}
-
-.dashboard-data-row > div {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.dashboard-data-row span {
-    color: var(--color-text-secondary);
-
-    font-size: 12px;
-}
-
-.dashboard-data-row strong {
-    color: var(--color-text);
-
-    font-size: 13px;
-}
-
-
-/* ========================================
-   STATUS
-======================================== */
-
-.dashboard-status {
-    padding: 4px 8px;
-
-    border-radius: 999px;
-
-    font-size: 10px;
-    font-weight: 600;
-}
-
-.dashboard-status--warning {
-    background: var(--color-warning-soft);
-    color: var(--color-warning);
-}
-
-
-/* ========================================
-   EMPTY STATE
-======================================== */
-
-.dashboard-empty {
-    min-height: 170px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    flex-direction: column;
-
-    gap: 6px;
-
-    text-align: center;
-}
-
-.dashboard-empty__icon {
-    width: 36px;
-    height: 36px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    margin-bottom: 4px;
-
-    border-radius: 10px;
-
-    background: var(--color-background);
-
-    color: var(--color-text-secondary);
-
-    font-size: 18px;
-}
-
-.dashboard-empty strong {
-    color: var(--color-text);
-
-    font-size: 13px;
-}
-
-.dashboard-empty span {
-    max-width: 300px;
-
-    color: var(--color-text-secondary);
-
-    font-size: 11px;
-    line-height: 1.5;
-}
-
-
-/* ========================================
-   RESPONSIVE
-======================================== */
-
-@media (max-width: 1100px) {
-    .dashboard-page__summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-
-@media (max-width: 800px) {
-    .dashboard-page__header {
-        flex-direction: column;
-    }
-
-    .dashboard-page__context {
-        width: 100%;
-    }
-
-    .dashboard-page__grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-@media (max-width: 560px) {
-    .dashboard-page__summary {
-        grid-template-columns: 1fr;
-    }
-
-    .dashboard-page__title {
-        font-size: 22px;
-    }
-
-    .dashboard-card {
-        padding: 16px;
-    }
+  }
+
+  .dashboard-page__actions .common-search {
+    width: 100%;
+  }
 }
