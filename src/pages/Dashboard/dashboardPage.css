@@ -243,3 +243,6 @@
   .dashboard-transactions .dashboard-panel__header { padding: 16px 16px 0; }
   .dashboard-table th, .dashboard-table td { padding: 12px; }
 }
+
+.dashboard-page__welcome-actions { display: flex; align-items: center; gap: 12px; }
+@media (max-width: 680px) { .dashboard-page__welcome-actions { align-items: stretch; flex-direction: column; } }

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
-import { ArrowDownLeft, ArrowUpRight, Landmark, Wallet } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, Landmark, Plus, Wallet } from "lucide-react"
+import Button from "../../components/common/Button"
 
 import SearchInput from "../../components/common/SearchInput"
 import "./cashFlowPage.css"
@@ -19,7 +20,7 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function CashFlowPage({ data = {} }) {
+function CashFlowPage({ data = {}, onCreateCashEntry }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const summary = data?.summary ?? {}
@@ -57,16 +58,17 @@ function CashFlowPage({ data = {} }) {
             Ringkasan saldo dan pergerakan dana seluruh unit usaha.
           </p>
         </div>
+        <Button onClick={onCreateCashEntry}><Plus size={16} />Tambah Kas</Button>
       </header>
 
       <section className="cash-flow-total" aria-label="Ringkasan saldo kas dan bank">
         <div>
-          <span className="cash-flow-total__label">Total saldo seluruh akun</span>
+          <span className="cash-flow-total__label">Mutasi bersih seluruh akun</span>
           <strong className="cash-flow-total__value">
             {formatCurrency(summary.balance)}
           </strong>
           <span className="cash-flow-total__caption">
-            {summary.asOf ? "Per " + summary.asOf : "Saldo gabungan akun kas dan bank"}
+            {summary.asOf ? "Per " + summary.asOf : "Nilai dihitung dari kas masuk dikurangi kas keluar yang dicatat"}
           </span>
         </div>
       </section>
@@ -90,7 +92,7 @@ function CashFlowPage({ data = {} }) {
                 <span className="cash-account-card__name">
                   {account?.name || kind.label + " " + unit.name}
                 </span>
-                <strong className="cash-account-card__balance">
+                <strong className="cash-account-card__balance" aria-label="Mutasi bersih akun">
                   {formatCurrency(account?.balance)}
                 </strong>
                 <div className="cash-account-card__movement">

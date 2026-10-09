@@ -1,0 +1,40 @@
+.transaction-form { display: flex; flex-direction: column; gap: 20px; }
+.transaction-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.transaction-form__grid--new { margin-top: 14px; }
+.transaction-form__field { display: flex; min-width: 0; flex-direction: column; gap: 7px; color: var(--color-text-secondary); font-size: 12px; font-weight: 600; }
+.transaction-form__field b { color: var(--color-danger); }
+.transaction-form__field input, .transaction-form__field select {
+  box-sizing: border-box; width: 100%; min-height: 42px; padding: 9px 11px;
+  color: var(--color-text-primary); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: 9px; font: inherit; font-weight: 400;
+}
+.transaction-form__field input:focus, .transaction-form__field select:focus {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 16%, transparent);
+  border-color: var(--color-primary);
+}
+.transaction-form__section { padding-top: 16px; border-top: 1px solid var(--color-border); }
+.transaction-form__section h3 { margin: 0 0 13px; color: var(--color-text-primary); font-size: 14px; }
+.transaction-form__field--wide { grid-column: 1 / -1; }
+.transaction-form__error { margin: 0; padding: 10px 12px; color: var(--color-danger); background: var(--color-danger-soft); border-radius: 8px; font-size: 12px; }
+.transaction-form__actions { display: flex; justify-content: flex-end; gap: 10px; }
+@media (max-width: 620px) {
+  .transaction-form__grid { grid-template-columns: 1fr; }
+  .transaction-form__field--wide { grid-column: auto; }
+}
+
+.transaction-form__hint { margin: -8px 0 0; color: var(--color-text-tertiary); font-size: 12px; line-height: 1.5; }
+.transaction-form__field textarea { box-sizing: border-box; width: 100%; min-height: 42px; padding: 9px 11px; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 9px; font: inherit; font-weight: 400; resize: vertical; }
+.transaction-form__items-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.transaction-form__items-heading h3 { margin: 0 0 5px; color: var(--color-text-primary); font-size: 14px; }
+.transaction-form__items-heading p { margin: 0; color: var(--color-text-tertiary); font-size: 12px; }
+.transaction-form__items { display: flex; flex-direction: column; gap: 12px; }
+.transaction-item { display: flex; flex-direction: column; gap: 13px; padding: 16px; background: var(--color-background-secondary); border: 1px solid var(--color-border); border-radius: 12px; }
+.transaction-item__heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.transaction-item__heading > strong { color: var(--color-text-primary); font-size: 13px; }
+.transaction-item__sku { margin: -5px 0 0; color: var(--color-text-tertiary); font-size: 11px; }
+.transaction-item__values { margin-top: 2px; }
+.transaction-item__total, .transaction-form__grand-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 11px; border-top: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: 12px; }
+.transaction-item__total strong { color: var(--color-text-primary); }
+.transaction-form__grand-total { padding: 15px 2px 0; font-size: 14px; }
+.transaction-form__grand-total strong { color: var(--color-text-primary); font-size: 18px; }
+@media (max-width: 620px) { .transaction-form__items-heading { align-items: flex-start; flex-direction: column; } .transaction-item { padding: 13px; } }

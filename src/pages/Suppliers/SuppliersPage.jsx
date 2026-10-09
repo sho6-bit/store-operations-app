@@ -1,14 +1,31 @@
 import { useMemo, useState } from "react"
+import { Plus } from "lucide-react"
+import Button from "../../components/common/Button"
+import Modal from "../../components/common/Modal"
 
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
 import "./suppliersPage.css"
 
-function SuppliersPage({ data = [] }) {
+function SuppliersPage({ data = [], onCreateSupplier }) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [modalOpen, setModalOpen] = useState(false)
+  const [form, setForm] = useState({ name: "", address: "", phone: "" })
+  const [formError, setFormError] = useState("")
   const suppliers = Array.isArray(data) ? data : []
+
+  async function submitSupplier(event) {
+    event.preventDefault()
+    if (!form.name.trim()) { setFormError("Nama supplier wajib diisi."); return }
+    try {
+      await onCreateSupplier?.({ name: form.name.trim(), address: form.address.trim(), phone: form.phone.trim() })
+      setForm({ name: "", address: "", phone: "" })
+      setFormError("")
+      setModalOpen(false)
+    } catch (error) { setFormError(error?.message || "Supplier gagal disimpan.") }
+  }
   const suppliersWithPhone = suppliers.filter((supplier) => supplier.phone).length
-  const suppliersWithEmail = suppliers.filter((supplier) => supplier.email).length
+  const suppliersWithAddress = suppliers.filter((supplier) => supplier.address).length
 
   const filteredSuppliers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -31,12 +48,13 @@ function SuppliersPage({ data = [] }) {
             Lihat informasi supplier yang tersedia.
           </p>
         </div>
+        <Button onClick={() => { setForm({ name: "", address: "", phone: "" }); setFormError(""); setModalOpen(true) }}><Plus size={16} />Tambah Supplier</Button>
       </header>
 
       <SummaryCards cards={[
         { label: "Supplier terdaftar", value: suppliers.length, detail: "Jumlah data supplier", tone: "blue" },
         { label: "Memiliki nomor telepon", value: suppliersWithPhone, detail: "Berdasarkan data kontak", tone: "green" },
-        { label: "Memiliki email", value: suppliersWithEmail, detail: "Berdasarkan data kontak", tone: "purple" },
+        { label: "Memiliki alamat", value: suppliersWithAddress, detail: "Berdasarkan data kontak", tone: "purple" },
       ]} />
 
       <section className="suppliers-card" aria-label="Daftar supplier">
@@ -49,7 +67,7 @@ function SuppliersPage({ data = [] }) {
           <SearchInput
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Cari nama, telepon, atau email..."
+            placeholder="Cari nama, telepon, atau alamat..."
             ariaLabel="Cari supplier"
           />
         </div>
@@ -61,7 +79,6 @@ function SuppliersPage({ data = [] }) {
                 <tr>
                   <th>Nama supplier</th>
                   <th>Telepon</th>
-                  <th>Email</th>
                   <th>Alamat</th>
                 </tr>
               </thead>
@@ -72,7 +89,6 @@ function SuppliersPage({ data = [] }) {
                       <strong>{supplier.name || "—"}</strong>
                     </td>
                     <td>{supplier.phone || "—"}</td>
-                    <td>{supplier.email || "—"}</td>
                     <td className="suppliers-table__address">
                       {supplier.address || "—"}
                     </td>
@@ -100,6 +116,16 @@ function SuppliersPage({ data = [] }) {
           Menampilkan {filteredSuppliers.length} dari {suppliers.length} supplier
         </footer>
       </section>
+
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Tambah supplier" size="medium">
+        <form className="transaction-form" onSubmit={submitSupplier}>
+          <label className="transaction-form__field"><span>Nama supplier <b>*</b></span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+          <label className="transaction-form__field"><span>Alamat</span><textarea rows="3" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} /></label>
+          <label className="transaction-form__field"><span>Nomor HP</span><input type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label>
+          {formError && <p className="transaction-form__error" role="alert">{formError}</p>}
+          <div className="transaction-form__actions"><Button variant="secondary" type="button" onClick={() => setModalOpen(false)}>Batal</Button><Button type="submit">Simpan supplier</Button></div>
+        </form>
+      </Modal>
     </section>
   )
 }

@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react"
 
+import { Pencil, Plus } from "lucide-react"
+import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
 import "./salesPage.css"
@@ -14,7 +16,7 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function SalesPage({ data = [] }) {
+function SalesPage({ data = [], onCreateTransaction, onEditTransaction }) {
   const [searchTerm, setSearchTerm] = useState("")
   const sales = Array.isArray(data) ? data : []
   const totalSales = sales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
@@ -33,6 +35,7 @@ function SalesPage({ data = [] }) {
         sale.customer,
         sale.paymentMethod,
         sale.status,
+        sale.leasingProvider,
         sale.date,
       ]
         .filter(Boolean)
@@ -50,6 +53,7 @@ function SalesPage({ data = [] }) {
             Lihat catatan transaksi penjualan yang tersedia.
           </p>
         </div>
+        <Button onClick={onCreateTransaction}><Plus size={16} />Buat Transaksi</Button>
       </header>
 
       <SummaryCards cards={[
@@ -84,6 +88,7 @@ function SalesPage({ data = [] }) {
                   <th>Metode pembayaran</th>
                   <th>Status</th>
                   <th className="sales-table__amount-heading">Total</th>
+                  <th className="sales-table__action-heading">Aksi</th>
                 </tr>
               </thead>
 
@@ -95,7 +100,9 @@ function SalesPage({ data = [] }) {
                     </td>
                     <td>{sale.date || "—"}</td>
                     <td>{sale.customer || "—"}</td>
-                    <td>{sale.paymentMethod || "—"}</td>
+                    <td>{sale.paymentMethod === "Kredit" && sale.leasingProvider
+                      ? "Kredit · " + sale.leasingProvider
+                      : sale.paymentMethod || "—"}</td>
                     <td>
                       {sale.status ? (
                         <span
@@ -113,6 +120,11 @@ function SalesPage({ data = [] }) {
                     </td>
                     <td className="sales-table__amount">
                       {formatCurrency(sale.total)}
+                    </td>
+                    <td className="sales-table__action">
+                      <button className="sales-edit-button" type="button" onClick={() => onEditTransaction?.(sale)} aria-label={"Edit transaksi " + (sale.number || "") } title="Edit transaksi">
+                        <Pencil size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}

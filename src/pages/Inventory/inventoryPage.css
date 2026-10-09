@@ -26,3 +26,7 @@
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 850px) { .inventory-card__toolbar { flex-wrap: wrap; } .inventory-card__toolbar .common-search { flex-basis: 100%; } .inventory-select, .inventory-select select { flex: 1; } }
 @media (max-width: 560px) { .inventory-page { gap: 16px; } .inventory-card__toolbar { align-items: stretch; flex-direction: column; padding: 14px; } .inventory-card__toolbar .common-search { width: 100%; } .inventory-select select { width: 100%; } .inventory-table th, .inventory-table td { padding: 12px; } }
+
+.inventory-edit-button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; color: var(--color-primary); background: transparent; border: 1px solid var(--color-border); border-radius: 8px; font: inherit; font-size: 11px; cursor: pointer; }
+.inventory-edit-button:hover { background: var(--color-primary-soft); }
+.inventory-page__header > .common-button { flex: 0 0 auto; }

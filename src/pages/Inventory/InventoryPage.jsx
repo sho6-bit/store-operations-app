@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react"
+import { Pencil, Plus } from "lucide-react"
+import Button from "../../components/common/Button"
+import Modal from "../../components/common/Modal"
 
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
@@ -19,14 +22,17 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function InventoryPage({ data = [] }) {
+function InventoryPage({ data = [], onSaveProduct }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [unitFilter, setUnitFilter] = useState("all")
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState({ name: "", sku: "", costPrice: "", referencePrice: "" })
+  const [formError, setFormError] = useState("")
   const products = Array.isArray(data) ? data : []
 
   const categories = [...new Set(products.map((product) => product.category).filter(Boolean))]
-  const totalStock = products.reduce((sum, product) => sum + (Number(product.stock) || 0), 0)
   const hasCostData = products.length > 0 && products.every((product) => product.costPrice != null || product.cost != null)
   const inventoryValue = products.reduce(
     (sum, product) => sum + (Number(product.stock) || 0) * (Number(product.costPrice ?? product.cost) || 0),
@@ -52,6 +58,26 @@ function InventoryPage({ data = [] }) {
     })
   }, [products, searchTerm, categoryFilter, unitFilter])
 
+  function openProduct(product = null) {
+    setEditing(product)
+    setForm({ name: product?.name || "", sku: product?.sku || "", costPrice: product?.costPrice ?? product?.cost ?? "", referencePrice: product?.referencePrice ?? product?.price ?? "" })
+    setFormError("")
+    setModalOpen(true)
+  }
+
+  async function submitProduct(event) {
+    event.preventDefault()
+    if (!form.name.trim() || !form.sku.trim() || form.costPrice === "" || form.referencePrice === "") {
+      setFormError("Nama, SKU, harga modal, dan harga jual patokan wajib diisi.")
+      return
+    }
+    try {
+      await onSaveProduct?.({ id: editing?.id, name: form.name.trim(), sku: form.sku.trim(), costPrice: Number(form.costPrice), referencePrice: Number(form.referencePrice), price: Number(form.referencePrice), stock: editing?.stock ?? 0, category: editing?.category || "", businessUnit: editing?.businessUnit || "" })
+      setModalOpen(false)
+      setEditing(null)
+    } catch (error) { setFormError(error?.message || "Produk gagal disimpan.") }
+  }
+
   function getStockStatus(product) {
     const stock = Number(product.stock)
     const threshold = product.reorderLevel ?? product.minStock
@@ -72,6 +98,7 @@ function InventoryPage({ data = [] }) {
             Pantau persediaan, nilai inventori, dan pergerakan stok.
           </p>
         </div>
+        <Button onClick={() => openProduct()}><Plus size={16} />Tambah Produk</Button>
       </header>
 
       <SummaryCards cards={[
@@ -117,6 +144,7 @@ function InventoryPage({ data = [] }) {
                   <th>HPP saat ini</th>
                   <th>Harga referensi</th>
                   <th>Status</th>
+                  <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,6 +172,7 @@ function InventoryPage({ data = [] }) {
                           </span>
                         ) : "—"}
                       </td>
+                      <td><button className="inventory-edit-button" type="button" onClick={() => openProduct(product)} aria-label={"Ubah harga " + product.name}><Pencil size={15} />Ubah</button></td>
                     </tr>
                   )
                 })}
@@ -165,6 +194,20 @@ function InventoryPage({ data = [] }) {
           Menampilkan {filteredProducts.length} dari {products.length} produk
         </footer>
       </section>
+
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Ubah produk dan harga patokan" : "Tambah produk"} size="medium">
+        <form className="transaction-form" onSubmit={submitProduct}>
+          <div className="transaction-form__grid">
+            <label className="transaction-form__field transaction-form__field--wide"><span>Nama produk <b>*</b></span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+            <label className="transaction-form__field"><span>SKU <b>*</b></span><input required value={form.sku} onChange={(event) => setForm({ ...form, sku: event.target.value })} /></label>
+            <label className="transaction-form__field"><span>Harga modal patokan (Rp) <b>*</b></span><input type="number" min="0" required value={form.costPrice} onChange={(event) => setForm({ ...form, costPrice: event.target.value })} /></label>
+            <label className="transaction-form__field transaction-form__field--wide"><span>Harga jual patokan (Rp) <b>*</b></span><input type="number" min="0" required value={form.referencePrice} onChange={(event) => setForm({ ...form, referencePrice: event.target.value })} /></label>
+          </div>
+          <p className="transaction-form__hint">Harga patokan dapat diubah kembali melalui tombol Ubah pada baris produk.</p>
+          {formError && <p className="transaction-form__error" role="alert">{formError}</p>}
+          <div className="transaction-form__actions"><Button variant="secondary" type="button" onClick={() => setModalOpen(false)}>Batal</Button><Button type="submit">Simpan produk</Button></div>
+        </form>
+      </Modal>
     </section>
   )
 }

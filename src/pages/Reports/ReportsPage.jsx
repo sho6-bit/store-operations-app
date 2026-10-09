@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react"
+import { Download } from "lucide-react"
+import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
 import "./reportsPage.css"
 
@@ -62,6 +64,7 @@ function ReportsPage({
             Tinjau laporan berdasarkan periode dan unit usaha.
           </p>
         </div>
+        <Button variant="secondary" onClick={() => window.print()}><Download size={16} />Unduh PDF</Button>
       </header>
 
       <section className="reports-filters" aria-label="Filter laporan">

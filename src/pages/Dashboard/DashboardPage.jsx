@@ -1,13 +1,12 @@
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  CircleDollarSign,
   Package,
+  Plus,
   ShoppingCart,
   Users,
   Wallet,
 } from "lucide-react"
 
+import Button from "../../components/common/Button"
 import StatCard from "../../components/common/StatCard"
 import "./dashboardPage.css"
 
@@ -27,7 +26,7 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function DashboardPage({ data, selectedBusinessUnit }) {
+function DashboardPage({ data, selectedBusinessUnit, onCreateTransaction }) {
   const summary = data?.summary ?? {}
   const salesOverview = Array.isArray(data?.salesOverview) ? data.salesOverview : []
   const salesByUnit = Array.isArray(data?.salesByUnit) ? data.salesByUnit : []
@@ -49,16 +48,19 @@ function DashboardPage({ data, selectedBusinessUnit }) {
             Pantau kinerja toko dari data yang tersedia.
           </p>
         </div>
-        <div className="dashboard-page__unit">
-          <span>UNIT USAHA</span>
-          <strong>{unitNames[selectedBusinessUnit] || selectedBusinessUnit || "—"}</strong>
+        <div className="dashboard-page__welcome-actions">
+          <div className="dashboard-page__unit">
+            <span>UNIT USAHA</span>
+            <strong>{unitNames[selectedBusinessUnit] || selectedBusinessUnit || "—"}</strong>
+          </div>
+          <Button onClick={onCreateTransaction}><Plus size={16} />Buat Transaksi</Button>
         </div>
       </header>
 
       <section className="dashboard-page__summary" aria-label="Ringkasan utama">
         <StatCard label="Total Penjualan" value={formatCurrency(summary.sales)} icon={ShoppingCart} tone="blue" />
         <StatCard label="Total Pembelian" value={formatCurrency(summary.purchases)} icon={Package} tone="purple" />
-        <StatCard label="Saldo Kas & Bank" value={formatCurrency(summary.cashAndBank)} icon={Wallet} tone="green" />
+        <StatCard label="Arus Kas Bersih" value={formatCurrency(summary.cashAndBank)} icon={Wallet} tone="green" />
         <StatCard label="Piutang" value={formatCurrency(summary.receivables)} icon={Users} tone="orange" />
       </section>
 

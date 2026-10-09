@@ -125,6 +125,7 @@ function CustomerPage({
 
   async function handleDelete(customer) {
     setActionError("")
+    if (!window.confirm("Hapus data pelanggan “" + customer.name + "”?")) return
 
     if (typeof onDeleteCustomer !== "function") {
       setActionError("Aksi hapus belum tersambung ke penyimpanan data.")

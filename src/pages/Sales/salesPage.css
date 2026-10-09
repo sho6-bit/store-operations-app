@@ -201,3 +201,7 @@
 }
 .sales-page > .page-summary-cards { margin-bottom: 0; }
 
+
+.sales-table__action-heading, .sales-table__action { text-align: center; }
+.sales-edit-button, .purchases-edit-button { display: inline-grid; width: 34px; height: 34px; place-items: center; color: var(--color-text-secondary); background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
+.sales-edit-button:hover, .purchases-edit-button:hover { color: var(--color-primary); background: var(--color-primary-soft); border-color: var(--color-border); }

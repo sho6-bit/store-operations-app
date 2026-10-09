@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react"
 
+import { Pencil, Plus } from "lucide-react"
+import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
 import "./purchasesPage.css"
@@ -14,12 +16,12 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function PurchasesPage({ data = [] }) {
+function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction }) {
   const [searchTerm, setSearchTerm] = useState("")
   const purchases = Array.isArray(data) ? data : []
   const totalPurchases = purchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
   const pendingPurchases = purchases.filter((purchase) =>
-    ["menunggu", "pending", "belum lunas"].includes(String(purchase.status || "").trim().toLowerCase()),
+    ["menunggu", "pending", "belum lunas", "belum dibayar"].includes(String(purchase.status || "").trim().toLowerCase()),
   )
   const pendingTotal = pendingPurchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
 
@@ -28,7 +30,7 @@ function PurchasesPage({ data = [] }) {
     if (!query) return purchases
 
     return purchases.filter((purchase) =>
-      [purchase.number, purchase.supplier, purchase.status, purchase.date]
+      [purchase.number, purchase.supplier, purchase.status, purchase.paymentMethod, purchase.date]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query)),
     )
@@ -44,6 +46,7 @@ function PurchasesPage({ data = [] }) {
             Lihat catatan pembelian yang tersedia.
           </p>
         </div>
+        <Button onClick={onCreateTransaction}><Plus size={16} />Buat Transaksi</Button>
       </header>
 
       <SummaryCards cards={[
@@ -75,8 +78,10 @@ function PurchasesPage({ data = [] }) {
                   <th>Nomor</th>
                   <th>Tanggal</th>
                   <th>Supplier</th>
+                  <th>Metode pembayaran</th>
                   <th>Status</th>
                   <th className="purchases-table__amount-heading">Total</th>
+                  <th className="purchases-table__action-heading">Aksi</th>
                 </tr>
               </thead>
 
@@ -88,6 +93,7 @@ function PurchasesPage({ data = [] }) {
                     </td>
                     <td>{purchase.date || "—"}</td>
                     <td>{purchase.supplier || "—"}</td>
+                    <td>{purchase.paymentMethod || "—"}</td>
                     <td>
                       {purchase.status ? (
                         <span
@@ -105,6 +111,11 @@ function PurchasesPage({ data = [] }) {
                     </td>
                     <td className="purchases-table__amount">
                       {formatCurrency(purchase.total)}
+                    </td>
+                    <td className="purchases-table__action">
+                      <button className="purchases-edit-button" type="button" onClick={() => onEditTransaction?.(purchase)} aria-label={"Edit transaksi " + (purchase.number || "") } title="Edit transaksi">
+                        <Pencil size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
