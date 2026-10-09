@@ -10,7 +10,7 @@ import Button from "../../components/common/Button"
 import StatCard from "../../components/common/StatCard"
 import "./dashboardPage.css"
 
-const unitNames = {
+const defaultUnitNames = {
   all: "Semua Unit Usaha",
   furniture: "Furniture",
   "electronic-1": "Electronic 1",
@@ -26,7 +26,8 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function DashboardPage({ data, selectedBusinessUnit, onCreateTransaction }) {
+function DashboardPage({ data, selectedBusinessUnit, onCreateTransaction, businessUnits = Object.entries(defaultUnitNames).filter(([id]) => id !== "all").map(([id, name]) => ({ id, name })) }) {
+  const unitNames = { all: "Semua Unit Usaha", ...Object.fromEntries(businessUnits.map((unit) => [unit.id, unit.name])) }
   const summary = data?.summary ?? {}
   const salesOverview = Array.isArray(data?.salesOverview) ? data.salesOverview : []
   const salesByUnit = Array.isArray(data?.salesByUnit) ? data.salesByUnit : []
@@ -139,7 +140,7 @@ function DashboardPage({ data, selectedBusinessUnit, onCreateTransaction }) {
                   <li key={unit.id}>
                     <span className="unit-legend__name">
                       <i style={{ background: `var(--unit-color-${index % 5})` }} />
-                      {unit.label}
+                      {unitNames[unit.id] || unit.label}
                     </span>
                     <strong>{unitTotal ? Math.round((Number(unit.value) / unitTotal) * 100) : 0}%</strong>
                   </li>

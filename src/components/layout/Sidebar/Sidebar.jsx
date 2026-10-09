@@ -65,7 +65,7 @@ const navigationItems = [
   },
 ]
 
-const businessUnits = [
+const defaultBusinessUnits = [
   {
     id: "all",
     name: "Semua Unit Usaha",
@@ -85,6 +85,8 @@ const businessUnits = [
 ]
 
 function Sidebar({
+  businessUnits = defaultBusinessUnits,
+  storeProfile,
   activeItem = "dashboard",
   onNavigate,
   selectedBusinessUnit = "all",
@@ -118,7 +120,7 @@ function Sidebar({
           {!collapsed && (
             <div className="sidebar__brand-text">
               <h1>Toko Noni</h1>
-              <span>Store Operations</span>
+              <span>{storeProfile?.description || "Store Operations"}</span>
             </div>
           )}
         </div>

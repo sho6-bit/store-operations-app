@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Pencil, Plus } from "lucide-react"
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
@@ -7,7 +7,7 @@ import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
 import "./inventoryPage.css"
 
-const businessUnits = [
+const defaultBusinessUnits = [
   { id: "furniture", name: "Furniture" },
   { id: "electronic-1", name: "Electronic 1" },
   { id: "electronic-2", name: "Electronic 2" },
@@ -22,8 +22,9 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function InventoryPage({ data = [], onSaveProduct }) {
+function InventoryPage({ data = [], onSaveProduct, businessUnits = defaultBusinessUnits, stockLowThreshold = 1, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
+  useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [unitFilter, setUnitFilter] = useState("all")
   const [modalOpen, setModalOpen] = useState(false)
@@ -39,7 +40,7 @@ function InventoryPage({ data = [], onSaveProduct }) {
     0,
   )
   const lowStockCount = products.filter((product) => {
-    const threshold = product.reorderLevel ?? product.minStock ?? 1
+    const threshold = product.reorderLevel ?? product.minStock ?? stockLowThreshold
     return threshold != null && Number(product.stock) > 0 && Number(product.stock) <= Number(threshold)
   }).length
   const outOfStockCount = products.filter((product) => product.stock != null && Number(product.stock) === 0).length
@@ -79,7 +80,7 @@ function InventoryPage({ data = [], onSaveProduct }) {
 
   function getStockStatus(product) {
     const stock = Number(product.stock)
-    const threshold = product.reorderLevel ?? product.minStock ?? 1
+    const threshold = product.reorderLevel ?? product.minStock ?? stockLowThreshold
     if (product.stock == null || !Number.isFinite(stock)) return null
     if (stock === 0) return { label: "Habis", tone: "out" }
     if (threshold != null && stock <= Number(threshold)) return { label: "Menipis", tone: "low" }
@@ -103,7 +104,7 @@ function InventoryPage({ data = [], onSaveProduct }) {
       <SummaryCards cards={[
         { label: "Total SKU", value: products.length, detail: "Jumlah produk pada data inventori", tone: "blue" },
         { label: "Nilai inventori", value: hasCostData ? formatCurrency(inventoryValue) : "—", detail: "Dihitung dari stok dan HPP yang tersedia", tone: "green" },
-        { label: "Stok menipis", value: lowStockCount, detail: "Batas stok menipis: 1 unit", tone: "orange" },
+        { label: "Stok menipis", value: lowStockCount, detail: "Batas stok menipis: " + stockLowThreshold + " unit", tone: "orange" },
         { label: "Stok habis", value: products.length ? outOfStockCount : "—", detail: "Produk dengan jumlah stok nol", tone: "purple" },
       ]} />
 

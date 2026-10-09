@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { CircleDollarSign, Pencil, Plus } from "lucide-react"
 import Button from "../../components/common/Button"
@@ -16,8 +16,11 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettleTransaction }) {
+const defaultBusinessUnits = [{ id: "furniture", name: "Furniture" }, { id: "electronic-1", name: "Electronic 1" }, { id: "electronic-2", name: "Electronic 2" }]
+
+function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettleTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
+  useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const sales = Array.isArray(data) ? data : []
   const totalSales = sales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
   const unpaidSales = sales.filter((sale) =>
@@ -102,7 +105,7 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
                     </td>
                     <td>{sale.date || "—"}</td>
                     <td>{sale.customer || "—"}</td>
-                    <td>{{ furniture: "Furniture", "electronic-1": "Electronic 1", "electronic-2": "Electronic 2" }[sale.businessUnit] || sale.businessUnit || "—"}</td>
+                    <td>{businessUnits.find((unit) => unit.id === sale.businessUnit)?.name || sale.businessUnit || "—"}</td>
                     <td>{sale.paymentMethod === "Kredit" && sale.leasingProvider
                       ? "Kredit · " + sale.leasingProvider
                       : sale.paymentMethod === "DP" && sale.paymentChannel

@@ -1,0 +1,24 @@
+.gateway-page { display:grid; min-height:100vh; min-height:100dvh; place-items:center; padding:32px 20px; color:#0f172a; background:radial-gradient(ellipse at 50% 0%,#eaf1ff 0%,#f8fafc 52%); }
+.gateway-card { width:min(100%,400px); padding:clamp(25px,5vw,38px); background:#fff; border:1px solid #e4eaf2; border-radius:18px; box-shadow:0 18px 55px rgb(15 23 42 / 8%); }
+.gateway-brand { display:flex; align-items:center; justify-content:center; gap:11px; margin-bottom:37px; }
+.gateway-brand__mark { display:grid; width:43px; height:43px; place-items:center; color:#fff; background:#2563eb; border-radius:13px; box-shadow:0 7px 18px rgb(37 99 235 / 22%); }
+.gateway-brand strong { color:#101828; font-size:20px; font-weight:750; letter-spacing:-.035em; }
+.gateway-heading { display:grid; justify-items:center; gap:10px; margin-bottom:25px; }
+.gateway-heading__icon { display:grid; width:38px; height:38px; place-items:center; color:#2563eb; background:#eff5ff; border-radius:11px; }
+.gateway-heading h1 { color:#101828; font-size:25px; font-weight:730; letter-spacing:-.035em; }
+.gateway-form { display:grid; gap:17px; }
+.gateway-field { display:grid; gap:7px; color:#344054; font-size:12px; font-weight:650; }
+.gateway-field > input,.gateway-password { width:100%; height:45px; color:#101828; background:#fff; border:1px solid #d0d5dd; border-radius:9px; }
+.gateway-field > input,.gateway-password input { padding:0 12px; outline:none; font-size:13px; font-weight:400; }
+.gateway-field > input:focus,.gateway-password:focus-within { border-color:#528bff; box-shadow:0 0 0 3px rgb(37 99 235 / 12%); }
+.gateway-field input::placeholder { color:#98a2b3; }
+.gateway-password { display:flex; align-items:center; }
+.gateway-password input { width:100%; min-width:0; height:100%; background:transparent; border:0; }
+.gateway-password button { display:grid; width:42px; height:100%; flex:0 0 auto; place-items:center; color:#667085; background:transparent; border:0; border-radius:8px; cursor:pointer; }
+.gateway-password button:hover { color:#344054; }
+.gateway-submit { display:flex; height:45px; align-items:center; justify-content:center; gap:8px; margin-top:3px; color:#fff; background:#2563eb; border:0; border-radius:9px; box-shadow:0 5px 12px rgb(37 99 235 / 18%); font-size:13px; font-weight:700; cursor:pointer; transition:background-color 140ms ease,transform 140ms ease; }
+.gateway-submit:hover:not(:disabled) { background:#1d4ed8; transform:translateY(-1px); }
+.gateway-submit:disabled { background:#9bbafa; box-shadow:none; cursor:not-allowed; }
+.gateway-notice { color:#667085; font-size:11px; text-align:center; }
+.gateway-error { padding:10px 12px; color:#b42318; background:#fef3f2; border:1px solid #fecdca; border-radius:8px; font-size:12px; }
+@media(max-width:480px) { .gateway-page { padding:18px 14px; background:#fff; } .gateway-card { padding:26px 21px; border-color:transparent; border-radius:0; box-shadow:none; } .gateway-brand { margin-bottom:32px; } }

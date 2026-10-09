@@ -6,7 +6,7 @@ import Modal from "../common/Modal"
 import { createId } from "../../services/dataProvider.js"
 import "./transactionFormModal.css"
 
-const units = [
+const defaultUnits = [
   { id: "furniture", label: "Furniture" },
   { id: "electronic-1", label: "Electronic 1" },
   { id: "electronic-2", label: "Electronic 2" },
@@ -104,6 +104,7 @@ function TransactionFormModal({
   products = [],
   customers = [],
   suppliers = [],
+  businessUnits = defaultUnits,
 }) {
   const initialParties = initialType === "sale" ? customers : suppliers
   const [form, setForm] = useState(() => makeInitialForm(initialTransaction, initialType, products, initialParties))
@@ -340,7 +341,7 @@ function TransactionFormModal({
             <span>Unit usaha <b>*</b></span>
             <select value={form.businessUnit} onChange={(event) => handleBusinessUnitChange(event.target.value)} required disabled={Boolean(initialTransaction)}>
               <option value="">Pilih unit usaha</option>
-              {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.label}</option>)}
+              {businessUnits.map((unit) => <option key={unit.id} value={unit.id}>{unit.name || unit.label}</option>)}
             </select>
           </label>
           <label className="transaction-form__field">

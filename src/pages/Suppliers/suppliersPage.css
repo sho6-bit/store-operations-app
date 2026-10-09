@@ -166,3 +166,9 @@
 }
 .suppliers-page > .page-summary-cards { margin-bottom: 0; }
 
+.suppliers-table__actions-heading { width: 96px; text-align: right; }
+.suppliers-table__actions { display:flex; justify-content:flex-end; gap:6px; }
+.suppliers-icon-button { display:grid; width:32px; height:32px; place-items:center; color:var(--color-text-secondary); background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; cursor:pointer; transition:color var(--transition-fast),background-color var(--transition-fast),border-color var(--transition-fast); }
+.suppliers-icon-button:hover { color:var(--color-primary); background:var(--color-primary-soft); border-color:var(--color-primary); }
+.suppliers-icon-button--danger:hover { color:var(--color-danger); background:var(--color-danger-soft); border-color:var(--color-danger-border); }
+.suppliers-message { margin:12px 20px; padding:10px 12px; color:var(--color-danger); background:var(--color-danger-soft); border-radius:8px; font-size:12px; }

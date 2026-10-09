@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Pencil, Plus } from "lucide-react"
 import Button from "../../components/common/Button"
@@ -16,8 +16,11 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction }) {
+const defaultBusinessUnits = [{ id: "furniture", name: "Furniture" }, { id: "electronic-1", name: "Electronic 1" }, { id: "electronic-2", name: "Electronic 2" }]
+
+function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
+  useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const purchases = Array.isArray(data) ? data : []
   const totalPurchases = purchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
   const pendingPurchases = purchases.filter((purchase) =>
@@ -95,7 +98,7 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction }) {
                     </td>
                     <td>{purchase.date || "—"}</td>
                     <td>{purchase.supplier || "—"}</td>
-                    <td>{{ furniture: "Furniture", "electronic-1": "Electronic 1", "electronic-2": "Electronic 2" }[purchase.businessUnit] || purchase.businessUnit || "—"}</td>
+                    <td>{businessUnits.find((unit) => unit.id === purchase.businessUnit)?.name || purchase.businessUnit || "—"}</td>
                     <td>{purchase.paymentMethod || "—"}</td>
                     <td>{purchase.dueDate || "—"}</td>
                     <td>

@@ -1,67 +1,27 @@
-.setting-page {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  min-width: 0;
-  color: #101828;
-}
+.setting-page { display: flex; flex-direction: column; gap: 18px; min-width: 0; color: var(--color-text-primary); }
+.setting-page__header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.setting-page__eyebrow { color: var(--color-primary); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.setting-page__title { margin: 6px 0 4px; color: var(--color-text-primary); font-size: clamp(22px, 2.4vw, 28px); line-height: 1.2; }
+.setting-page__description { max-width: 650px; color: var(--color-text-secondary); font-size: 13px; }
+.setting-page__form { display: flex; flex-direction: column; gap: 14px; }
+.setting-card { overflow: hidden; padding: 18px 20px; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 14px; box-shadow: var(--shadow-xs); }
+.setting-card__header { margin-bottom: 15px; }
+.setting-card__header h2 { margin: 0 0 4px; color: var(--color-text-primary); font-size: 15px; }
+.setting-card__header p { color: var(--color-text-secondary); font-size: 12px; line-height: 1.45; }
+.setting-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.setting-fields--single { grid-template-columns: minmax(180px, 280px); }
+.setting-field { display: flex; min-width: 0; flex-direction: column; gap: 5px; color: var(--color-text-secondary); font-size: 11px; font-weight: 600; }
+.setting-field input, .setting-field textarea { width: 100%; min-height: 38px; padding: 8px 10px; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; font: inherit; font-size: 12px; font-weight: 400; }
+.setting-field textarea { resize: vertical; }
+.setting-field input[readonly] { color: var(--color-text-tertiary); background: var(--color-background-secondary); cursor: not-allowed; }
+.setting-field--wide { grid-column: 1 / -1; }
+.setting-unit-list { display: flex; flex-direction: column; gap: 10px; }
+.setting-unit { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 12px; background: var(--color-background-secondary); border: 1px solid var(--color-border-light); border-radius: 10px; }
+.setting-backup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.setting-page__file { display: none; }
+.setting-page__notice { padding: 10px 12px; color: var(--color-success); background: var(--color-success-soft); border: 1px solid var(--color-success-border); border-radius: 8px; font-size: 12px; }
+.setting-page__notice--error { color: var(--color-danger); background: var(--color-danger-soft); border-color: var(--color-danger-border); }
+.setting-page__actions { display: flex; justify-content: flex-end; }
+@media (max-width: 700px) { .setting-card { padding: 15px; } .setting-fields, .setting-unit { grid-template-columns: 1fr; } .setting-field--wide { grid-column: auto; } .setting-page__actions, .setting-page__actions button { width: 100%; } }
 
-.setting-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.setting-page__eyebrow {
-  color: #6941c6;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.setting-page__title {
-  margin: 7px 0 5px;
-  font-size: clamp(24px, 3vw, 30px);
-  line-height: 1.2;
-  letter-spacing: -0.03em;
-}
-
-.setting-page__description {
-  margin: 0;
-  color: #667085;
-  font-size: 14px;
-}
-
-.setting-card {
-  min-height: 280px;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid #eaecf0;
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
-
-.setting-empty {
-  display: flex;
-  min-height: 280px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 28px;
-  text-align: center;
-}
-
-.setting-empty strong {
-  color: #344054;
-  font-size: 14px;
-}
-
-.setting-empty span {
-  max-width: 420px;
-  color: #667085;
-  font-size: 13px;
-  line-height: 1.5;
-}
+.setting-page__help { color: var(--color-text-secondary); font-size: 12px; line-height: 1.5; }

@@ -16,6 +16,7 @@ import TransactionFormModal from "../forms/TransactionFormModal.jsx"
 import CashEntryModal from "../forms/CashEntryModal.jsx"
 import SettlementModal from "../../pages/Sales/SettlementModal.jsx"
 import { createId, readStoreData, writeStoreData } from "../../services/dataProvider.js"
+import { readAppSettings, writeAppSettings } from "../../services/settingsProvider.js"
 
 const pageTitles = {
   dashboard: "Dashboard", sales: "Penjualan", purchases: "Pembelian", inventory: "Stok",
@@ -33,12 +34,22 @@ function AppLayout() {
   const [searchValue, setSearchValue] = useState("")
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [store, setStore] = useState(readStoreData)
+  const [settings, setSettings] = useState(readAppSettings)
   const [transactionDraft, setTransactionDraft] = useState(null)
   const [isCashModalOpen, setIsCashModalOpen] = useState(false)
   const [settlementSale, setSettlementSale] = useState(null)
 
   useEffect(() => { writeStoreData(store) }, [store])
+  useEffect(() => { writeAppSettings(settings) }, [settings])
 
+  function saveSettings(nextSettings) {
+    setSettings({ ...nextSettings, storeProfile: { ...nextSettings.storeProfile, name: "Toko Noni" } })
+  }
+
+  function restoreBackup(backup) {
+    setStore(backup.store)
+    if (backup.settings) setSettings(backup.settings)
+  }
   function addParty(kind, party) {
     const id = createId()
     const record = { ...party, id }
@@ -54,6 +65,12 @@ function AppLayout() {
     setStore((current) => ({ ...current, customers: current.customers.filter((item) => item.id !== id) }))
   }
   function saveSupplier(supplier) { addParty("suppliers", supplier) }
+  function updateSupplier(id, supplier) {
+    setStore((current) => ({ ...current, suppliers: current.suppliers.map((item) => item.id === id ? { ...item, ...supplier } : item) }))
+  }
+  function deleteSupplier(id) {
+    setStore((current) => ({ ...current, suppliers: current.suppliers.filter((item) => item.id !== id) }))
+  }
 
   function saveProduct(product) {
     const duplicate = store.products.some((item) => item.sku?.toLowerCase() === product.sku?.toLowerCase() && item.id !== product.id)
@@ -86,6 +103,7 @@ function AppLayout() {
     const party = payload.party.id ? payload.party : { ...payload.party, id: createId() }
     const lineItems = payload.items.map((item) => {
       const product = item.product.id ? item.product : { ...item.product, id: createId(), stock: 0, businessUnit: payload.businessUnit }
+      const previousLine = existingTransaction?.items?.find((line) => line.productId === product.id || line.sku === product.sku)
       return {
         productId: product.id,
         product,
@@ -95,6 +113,11 @@ function AppLayout() {
         unitPrice: item.unitPrice,
         discount: item.discount,
         total: item.total,
+        costPriceAtSale: payload.type === "sale"
+          ? (previousLine
+            ? previousLine.costPriceAtSale ?? null
+            : product.costPrice ?? product.cost ?? null)
+          : null,
       }
     })
     const total = sum(lineItems.map((item) => item.total))
@@ -132,10 +155,10 @@ function AppLayout() {
       businessUnit: payload.businessUnit,
       type: payload.type === "sale" ? "income" : "expense",
       accountType: (payload.paymentMethod === "DP" ? payload.paymentChannel : payload.paymentMethod) === "Cash" ? "cash" : "bank",
-      account: payload.paymentMethod === "Kredit" ? "Kredit · " + payload.leasingProvider : payload.paymentMethod === "DP" ? payload.paymentChannel : payload.paymentMethod,
+      account: payload.paymentMethod === "Kredit" ? "Kredit Â· " + payload.leasingProvider : payload.paymentMethod === "DP" ? payload.paymentChannel : payload.paymentMethod,
       amount: initialPaymentAmount,
       category: payload.type === "sale" ? "Penjualan" : "Pembelian",
-      description: (payload.type === "sale" ? "Penjualan " : "Pembelian ") + payload.invoiceNumber + (party.name ? " · " + party.name : ""),
+      description: (payload.type === "sale" ? "Penjualan " : "Pembelian ") + payload.invoiceNumber + (party.name ? " Â· " + party.name : ""),
       reference: payload.invoiceNumber,
       paymentMethod: payload.paymentMethod,
     }
@@ -207,7 +230,7 @@ function AppLayout() {
       date, businessUnit: sale.businessUnit, type: "income",
       accountType: channel === "Cash" ? "cash" : "bank", account: channel,
       amount: remaining, category: "Pelunasan Penjualan",
-      description: "Pelunasan invoice " + sale.number + (sale.customer ? " · " + sale.customer : ""),
+      description: "Pelunasan invoice " + sale.number + (sale.customer ? " Â· " + sale.customer : ""),
       reference: sale.number, paymentMethod: channel,
     }
     setStore((current) => ({
@@ -224,7 +247,8 @@ function AppLayout() {
   }
 
   function saveCashEntry(entry) {
-    setStore((current) => ({ ...current, cashTransactions: [...current.cashTransactions, { ...entry, id: createId() }] }))
+    const account = settings.accounts[entry.businessUnit]?.[entry.accountType] || entry.account
+    setStore((current) => ({ ...current, cashTransactions: [...current.cashTransactions, { ...entry, account, id: createId() }] }))
   }
 
   const selectedSales = useMemo(() => store.sales.filter((item) => selectedBusinessUnit === "all" || item.businessUnit === selectedBusinessUnit), [store.sales, selectedBusinessUnit])
@@ -252,19 +276,19 @@ function AppLayout() {
       salesOverview: Array.from(byDate, ([label, value]) => ({ id: label, label, value })),
       salesByUnit: Array.from(byUnit, ([label, value]) => ({ id: label, label, value })),
       cashFlow: selectedCash.map((item) => ({ ...item, label: item.description, value: item.amount })),
-      lowStock: store.products.filter((item) => Number(item.stock) > 0 && Number(item.stock) <= Number(item.reorderLevel ?? item.minStock ?? 1)),
+      lowStock: store.products.filter((item) => Number(item.stock) > 0 && Number(item.stock) <= Number(item.reorderLevel ?? item.minStock ?? settings.stockLowThreshold)),
       recentTransactions: recent,
     }
-  }, [selectedSales, selectedPurchases, selectedCash, store.products])
+  }, [selectedSales, selectedPurchases, selectedCash, store.products, settings.stockLowThreshold])
 
   const cashPageData = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
     const accountTypes = ["cash", "bank"]
-    const accounts = ["furniture", "electronic-1", "electronic-2"].flatMap((unit) => accountTypes.map((type) => {
-      const rows = store.cashTransactions.filter((item) => item.businessUnit === unit && item.accountType === type)
-      if (!rows.length) return { businessUnit: unit, type, balance: null, todayIncome: null, todayExpense: null }
+    const accounts = settings.businessUnits.flatMap((unit) => accountTypes.map((type) => {
+      const rows = store.cashTransactions.filter((item) => item.businessUnit === unit.id && item.accountType === type)
+      if (!rows.length) return { businessUnit: unit.id, type, name: settings.accounts[unit.id]?.[type], balance: null, todayIncome: null, todayExpense: null }
       return {
-        businessUnit: unit, type,
+        businessUnit: unit.id, type, name: settings.accounts[unit.id]?.[type],
         balance: sum(rows.map((item) => item.type === "income" ? item.amount : -item.amount)),
         todayIncome: sum(rows.filter((item) => item.date === today && item.type === "income").map((item) => item.amount)),
         todayExpense: sum(rows.filter((item) => item.date === today && item.type === "expense").map((item) => item.amount)),
@@ -275,47 +299,58 @@ function AppLayout() {
       accounts,
       transactions: selectedCash,
     }
-  }, [store.cashTransactions, selectedCash])
+  }, [store.cashTransactions, selectedCash, settings])
 
-  const reportData = useMemo(() => {
-    const manualCashEntries = selectedCash.filter((item) => {
-      const category = String(item.category || "").trim().toLowerCase()
-      const isLinkedToTransaction = item.sourceTransactionId || item.sourceSettlementId || item.transactionId
-      const isTransactionCategory = ["penjualan", "pembelian", "pelunasan penjualan"].includes(category)
-      return !isLinkedToTransaction && !isTransactionCategory
-    })
+  const reportData = useMemo(() => ({
+    sales: selectedSales,
+    purchases: selectedPurchases,
+    cashTransactions: selectedCash,
+    products: selectedBusinessUnit === "all"
+      ? store.products
+      : store.products.filter((product) => (product.businessUnitId ?? product.businessUnit) === selectedBusinessUnit),
+  }), [selectedSales, selectedPurchases, selectedCash, selectedBusinessUnit, store.products])
 
-    return {
-      summary: [],
-      rows: [
-        ...selectedSales.map((item) => ({ id: item.id, date: item.date, businessUnit: item.businessUnit, type: "Penjualan", description: item.customer, category: "Penjualan", amount: item.total })),
-        ...selectedPurchases.map((item) => ({ id: item.id, date: item.date, businessUnit: item.businessUnit, type: "Pembelian", description: item.supplier, category: "Pembelian", amount: item.total })),
-        ...manualCashEntries.map((item) => ({ ...item, type: item.type === "income" ? "Kas masuk" : "Kas keluar", category: item.category, amount: item.amount })),
-      ],
-    }
-  }, [selectedSales, selectedPurchases, selectedCash])
+  const globalSearchResults = useMemo(() => {
+    const query = searchValue.trim().toLocaleLowerCase("id-ID")
+    if (!query) return []
+    const includes = (...values) => values.filter((value) => value != null && value !== "").some((value) => String(value).toLocaleLowerCase("id-ID").includes(query))
+    const results = []
+    store.sales.forEach((sale) => { if (includes(sale.number, sale.invoiceNumber, sale.customer, sale.businessUnit, sale.paymentMethod, sale.status, sale.date, sale.total)) results.push({ id: "sale:" + sale.id, type: "Penjualan", title: sale.number || sale.invoiceNumber || "Transaksi penjualan", subtitle: [sale.customer, sale.businessUnit, sale.date].filter(Boolean).join(" · "), page: "sales" }) })
+    store.purchases.forEach((item) => { if (includes(item.number, item.invoiceNumber, item.supplier, item.businessUnit, item.paymentMethod, item.status, item.date, item.total)) results.push({ id: "purchase:" + item.id, type: "Pembelian", title: item.number || item.invoiceNumber || "Transaksi pembelian", subtitle: [item.supplier, item.businessUnit, item.date].filter(Boolean).join(" · "), page: "purchases" }) })
+    store.products.forEach((item) => { if (includes(item.name, item.sku, item.category, item.businessUnit, item.businessUnitId)) results.push({ id: "product:" + item.id, type: "Produk", title: item.name || item.sku, subtitle: [item.sku, item.businessUnit ?? item.businessUnitId].filter(Boolean).join(" · "), page: "inventory" }) })
+    store.customers.forEach((item) => { if (includes(item.name, item.phone, item.email, item.address)) results.push({ id: "customer:" + item.id, type: "Pelanggan", title: item.name, subtitle: [item.phone, item.address].filter(Boolean).join(" · "), page: "customers" }) })
+    store.suppliers.forEach((item) => { if (includes(item.name, item.phone, item.email, item.address)) results.push({ id: "supplier:" + item.id, type: "Supplier", title: item.name, subtitle: [item.phone, item.address].filter(Boolean).join(" · "), page: "suppliers" }) })
+    store.cashTransactions.forEach((item) => { if (includes(item.description, item.reference, item.category, item.account, item.businessUnit, item.date)) results.push({ id: "cash:" + item.id, type: "Kas & Bank", title: item.description || item.reference || item.category || "Mutasi kas", subtitle: [item.account, item.businessUnit, item.date].filter(Boolean).join(" · "), page: "cash" }) })
+    return results.slice(0, 8)
+  }, [searchValue, store.sales, store.purchases, store.products, store.customers, store.suppliers, store.cashTransactions])
+
+  function handleSearchResultSelect(result) {
+    setSelectedBusinessUnit("all")
+    setActiveItem(result.page)
+    setSearchValue(result.title || searchValue)
+  }
 
   function renderPage() {
-    if (activeItem === "sales") return <SalesPage data={selectedSales} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "sale", record })} onSettleTransaction={setSettlementSale} />
-    if (activeItem === "purchases") return <PurchasesPage data={selectedPurchases} onCreateTransaction={() => setTransactionDraft({ type: "purchase", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "purchase", record })} />
-    if (activeItem === "inventory") return <InventoryPage data={store.products} onSaveProduct={saveProduct} />
-    if (activeItem === "customers") return <CustomersPage data={store.customers} onCreateCustomer={saveCustomer} onUpdateCustomer={updateCustomer} onDeleteCustomer={deleteCustomer} />
-    if (activeItem === "suppliers") return <SuppliersPage data={store.suppliers} onCreateSupplier={saveSupplier} />
-    if (activeItem === "cash") return <CashFlowPage data={cashPageData} onCreateCashEntry={() => setIsCashModalOpen(true)} />
-    if (activeItem === "reports") return <ReportsPage data={reportData} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} />
-    if (activeItem === "settings") return <SettingPage />
-    return <DashboardPage data={dashboardData} selectedBusinessUnit={selectedBusinessUnit} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} />
+    if (activeItem === "sales") return <SalesPage businessUnits={settings.businessUnits} data={selectedSales} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "sale", record })} onSettleTransaction={setSettlementSale} />
+    if (activeItem === "purchases") return <PurchasesPage businessUnits={settings.businessUnits} data={selectedPurchases} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "purchase", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "purchase", record })} />
+    if (activeItem === "inventory") return <InventoryPage data={store.products} globalSearchValue={searchValue} businessUnits={settings.businessUnits} stockLowThreshold={settings.stockLowThreshold} onSaveProduct={saveProduct} />
+    if (activeItem === "customers") return <CustomersPage data={store.customers} globalSearchValue={searchValue} onCreateCustomer={saveCustomer} onUpdateCustomer={updateCustomer} onDeleteCustomer={deleteCustomer} />
+    if (activeItem === "suppliers") return <SuppliersPage data={store.suppliers} globalSearchValue={searchValue} onCreateSupplier={saveSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />
+    if (activeItem === "cash") return <CashFlowPage data={cashPageData} globalSearchValue={searchValue} businessUnits={settings.businessUnits} onCreateCashEntry={() => setIsCashModalOpen(true)} />
+    if (activeItem === "reports") return <ReportsPage businessUnits={settings.businessUnits} data={reportData} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} />
+    if (activeItem === "settings") return <SettingPage settings={settings} storeData={store} onSaveSettings={saveSettings} onRestoreData={restoreBackup} />
+    return <DashboardPage businessUnits={settings.businessUnits} data={dashboardData} selectedBusinessUnit={selectedBusinessUnit} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} />
   }
 
   return (
     <div className={"app-layout " + (isDarkMode ? "app-layout--dark " : "") + (isSidebarCollapsed ? "app-layout--collapsed" : "")} data-theme={isDarkMode ? "dark" : "light"}>
-      <Sidebar activeItem={activeItem} onNavigate={setActiveItem} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} onCollapsedChange={setIsSidebarCollapsed} />
+      <Sidebar storeProfile={settings.storeProfile} businessUnits={settings.businessUnits} activeItem={activeItem} onNavigate={setActiveItem} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} onCollapsedChange={setIsSidebarCollapsed} />
       <div className="app-layout__main">
-        <TopBar title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
+        <TopBar title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} searchResults={globalSearchResults} onSearchResultSelect={handleSearchResultSelect} onNavigate={setActiveItem} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
         <main className="app-layout__content">{renderPage()}</main>
       </div>
-      {transactionDraft && <TransactionFormModal key={transactionDraft.record?.id || transactionDraft.type} initialType={transactionDraft.type} initialTransaction={transactionDraft.record} isOpen onClose={() => setTransactionDraft(null)} onSave={(payload) => saveTransaction(payload, transactionDraft.record)} products={store.products} customers={store.customers} suppliers={store.suppliers} />}
-      <CashEntryModal isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} onSave={saveCashEntry} />
+      {transactionDraft && <TransactionFormModal key={transactionDraft.record?.id || transactionDraft.type} initialType={transactionDraft.type} initialTransaction={transactionDraft.record} isOpen onClose={() => setTransactionDraft(null)} onSave={(payload) => saveTransaction(payload, transactionDraft.record)} businessUnits={settings.businessUnits} products={store.products} customers={store.customers} suppliers={store.suppliers} />}
+      <CashEntryModal businessUnits={settings.businessUnits} isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} onSave={saveCashEntry} />
       {settlementSale && <SettlementModal sale={settlementSale} onClose={() => setSettlementSale(null)} onSave={saveSettlement} />}
     </div>
   )

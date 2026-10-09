@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, Trash2, Users } from "lucide-react"
 
 import Button from "../../components/common/Button"
@@ -20,8 +20,10 @@ function CustomerPage({
   onCreateCustomer,
   onUpdateCustomer,
   onDeleteCustomer,
+  globalSearchValue = "",
 }) {
   const [searchTerm, setSearchTerm] = useState("")
+  useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState(null)
   const [form, setForm] = useState(emptyForm)
