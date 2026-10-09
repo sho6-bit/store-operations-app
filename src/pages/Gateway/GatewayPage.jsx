@@ -2,25 +2,39 @@ import { useState } from "react"
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Store } from "lucide-react"
 import "./gatewayPage.css"
 
-function GatewayPage({ onLogin }) {
+function GatewayPage({ onLogin, onRequestPasswordReset }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [isResetMode, setIsResetMode] = useState(false)
   const [error, setError] = useState("")
+  const [notice, setNotice] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!onLogin) return
     setError("")
+    setNotice("")
     setIsSubmitting(true)
     try {
-      await onLogin({ email: email.trim(), password })
-    } catch (loginError) {
-      setError(loginError?.message || "Login belum berhasil. Periksa email dan kata sandi.")
+      if (isResetMode) {
+        await onRequestPasswordReset?.(email.trim())
+        setNotice("Jika email terdaftar, tautan untuk mengatur ulang kata sandi akan dikirim.")
+      } else {
+        await onLogin?.({ email: email.trim(), password })
+      }
+    } catch (requestError) {
+      setError(requestError?.message || "Permintaan belum berhasil. Coba lagi.")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function toggleResetMode() {
+    setIsResetMode((current) => !current)
+    setPassword("")
+    setError("")
+    setNotice("")
   }
 
   return (
@@ -33,7 +47,7 @@ function GatewayPage({ onLogin }) {
 
         <div className="gateway-heading">
           <span className="gateway-heading__icon" aria-hidden="true"><LockKeyhole size={19} /></span>
-          <h1 id="gateway-title">Masuk</h1>
+          <h1 id="gateway-title">{isResetMode ? "Atur ulang kata sandi" : "Masuk"}</h1>
         </div>
 
         <form className="gateway-form" onSubmit={handleSubmit}>
@@ -41,7 +55,7 @@ function GatewayPage({ onLogin }) {
             <span>Email</span>
             <input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nama@email.com" required />
           </label>
-          <label className="gateway-field">
+          {!isResetMode && <label className="gateway-field">
             <span>Kata sandi</span>
             <span className="gateway-password">
               <input type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Masukkan kata sandi" required />
@@ -49,12 +63,15 @@ function GatewayPage({ onLogin }) {
                 {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </span>
-          </label>
+          </label>}
           {error && <p className="gateway-error" role="alert">{error}</p>}
-          <button className="gateway-submit" type="submit" disabled={!onLogin || isSubmitting || !email.trim() || !password}>
-            <span>{isSubmitting ? "Memeriksa akun..." : "Masuk"}</span><ArrowRight size={17} />
+          {notice && <p className="gateway-success" role="status">{notice}</p>}
+          <button className="gateway-submit" type="submit" disabled={isSubmitting || !email.trim() || (!isResetMode && !password) || (isResetMode ? !onRequestPasswordReset : !onLogin)}>
+            <span>{isSubmitting ? "Memproses..." : isResetMode ? "Kirim tautan reset" : "Masuk"}</span><ArrowRight size={17} />
           </button>
-          {!onLogin && <p className="gateway-notice">Login belum terhubung.</p>}
+          <button className="gateway-text-button" type="button" onClick={toggleResetMode}>
+            {isResetMode ? "Kembali ke halaman masuk" : "Lupa kata sandi?"}
+          </button>
         </form>
       </section>
     </main>
