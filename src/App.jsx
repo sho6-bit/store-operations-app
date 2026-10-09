@@ -47,6 +47,11 @@ function App() {
     if (error) throw error
   }
 
+  async function handleLogout() {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+  }
+
   async function handleSavePassword(password) {
     const { error } = await supabase.auth.updateUser({ password })
     if (error) throw error
@@ -66,7 +71,7 @@ function App() {
     return <GatewayPage onLogin={handleLogin} onRequestPasswordReset={handleRequestPasswordReset} />
   }
 
-  return <AppLayout />
+  return <AppLayout onLogout={handleLogout} />
 }
 
 export default App

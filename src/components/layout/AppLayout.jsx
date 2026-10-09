@@ -17,6 +17,7 @@ import CashEntryModal from "../forms/CashEntryModal.jsx"
 import SettlementModal from "../../pages/Sales/SettlementModal.jsx"
 import { createId, readStoreData, writeStoreData } from "../../services/dataProvider.js"
 import { readAppSettings, writeAppSettings } from "../../services/settingsProvider.js"
+import { supabase } from "../../lib/supabaseClient.js"
 
 const pageTitles = {
   dashboard: "Dashboard", sales: "Penjualan", purchases: "Pembelian", inventory: "Stok",
@@ -27,7 +28,7 @@ function sum(values) {
   return values.reduce((total, value) => total + (Number(value) || 0), 0)
 }
 
-function AppLayout() {
+function AppLayout({ onLogout }) {
   const [activeItem, setActiveItem] = useState("dashboard")
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState("all")
@@ -35,17 +36,74 @@ function AppLayout() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [store, setStore] = useState(readStoreData)
   const [settings, setSettings] = useState(readAppSettings)
+  const [cloudUserId, setCloudUserId] = useState(null)
+  const [isCloudReady, setIsCloudReady] = useState(false)
+  const [cloudSyncError, setCloudSyncError] = useState("")
   const [transactionDraft, setTransactionDraft] = useState(null)
   const [isCashModalOpen, setIsCashModalOpen] = useState(false)
   const [settlementSale, setSettlementSale] = useState(null)
 
   useEffect(() => { writeStoreData(store) }, [store])
   useEffect(() => { writeAppSettings(settings) }, [settings])
+  useEffect(() => {
+    let isActive = true
+    async function loadCloudData() {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError) throw userError
+        if (!user) throw new Error("Sesi login tidak ditemukan.")
+        const { data: row, error } = await supabase.from("store_app_data").select("app_data").eq("user_id", user.id).maybeSingle()
+        if (error) throw error
+        const collections = ["products", "customers", "suppliers", "sales", "purchases", "cashTransactions"]
+        const savedStore = row?.app_data?.store
+        const hasSavedStore = savedStore && collections.every((key) => Array.isArray(savedStore[key]))
+        if (hasSavedStore) {
+          if (isActive) {
+            setStore(Object.fromEntries(collections.map((key) => [key, savedStore[key]])))
+            if (row.app_data.settings) setSettings(row.app_data.settings)
+          }
+        } else {
+          const initialData = { store: readStoreData(), settings: readAppSettings() }
+          const { error: saveError } = await supabase.from("store_app_data").upsert({ user_id: user.id, app_data: initialData, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+          if (saveError) throw saveError
+        }
+        if (isActive) {
+          setCloudUserId(user.id)
+          setCloudSyncError("")
+          setIsCloudReady(true)
+        }
+      } catch (error) {
+        if (isActive) {
+          setCloudSyncError(error?.message || "Data belum dapat disambungkan ke Supabase.")
+          setIsCloudReady(true)
+        }
+      }
+    }
+    loadCloudData()
+    return () => { isActive = false }
+  }, [])
 
-  function saveSettings(nextSettings) {
-    setSettings({ ...nextSettings, storeProfile: { ...nextSettings.storeProfile, name: "Toko Noni" } })
+  useEffect(() => {
+    if (!isCloudReady || !cloudUserId) return undefined
+    let isActive = true
+    const timer = window.setTimeout(async () => {
+      const { error } = await supabase.from("store_app_data").upsert({ user_id: cloudUserId, app_data: { store, settings }, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      if (isActive) setCloudSyncError(error?.message || "")
+    }, 500)
+    return () => { isActive = false; window.clearTimeout(timer) }
+  }, [store, settings, isCloudReady, cloudUserId])
+
+  async function saveSettings(nextSettings) {
+    const normalizedSettings = { ...nextSettings, storeProfile: { ...nextSettings.storeProfile, name: "Toko Noni" } }
+    if (!cloudUserId) throw new Error("Sesi Supabase belum siap. Muat ulang halaman lalu coba lagi.")
+    const { error } = await supabase.from("store_app_data").upsert({
+      user_id: cloudUserId,
+      app_data: { store, settings: normalizedSettings },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" })
+    if (error) throw error
+    setSettings(normalizedSettings)
   }
-
   function restoreBackup(backup) {
     setStore(backup.store)
     if (backup.settings) setSettings(backup.settings)
@@ -338,15 +396,18 @@ function AppLayout() {
     if (activeItem === "suppliers") return <SuppliersPage data={store.suppliers} globalSearchValue={searchValue} onCreateSupplier={saveSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />
     if (activeItem === "cash") return <CashFlowPage data={cashPageData} globalSearchValue={searchValue} businessUnits={settings.businessUnits} onCreateCashEntry={() => setIsCashModalOpen(true)} />
     if (activeItem === "reports") return <ReportsPage businessUnits={settings.businessUnits} data={reportData} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} />
-    if (activeItem === "settings") return <SettingPage settings={settings} storeData={store} onSaveSettings={saveSettings} onRestoreData={restoreBackup} />
+    if (activeItem === "settings") return <SettingPage settings={settings} storeData={store} onSaveSettings={saveSettings} onRestoreData={restoreBackup} onLogout={onLogout} />
     return <DashboardPage businessUnits={settings.businessUnits} data={dashboardData} selectedBusinessUnit={selectedBusinessUnit} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} />
   }
 
+  if (!isCloudReady) return <div className="app-cloud-loading">Menghubungkan data toko…</div>
+
   return (
     <div className={"app-layout " + (isDarkMode ? "app-layout--dark " : "") + (isSidebarCollapsed ? "app-layout--collapsed" : "")} data-theme={isDarkMode ? "dark" : "light"}>
+      {cloudSyncError && <div className="app-cloud-sync-error" role="alert">Sinkronisasi Supabase belum berhasil: {cloudSyncError}</div>}
       <Sidebar storeProfile={settings.storeProfile} businessUnits={settings.businessUnits} activeItem={activeItem} onNavigate={setActiveItem} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} onCollapsedChange={setIsSidebarCollapsed} />
       <div className="app-layout__main">
-        <TopBar title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} searchResults={globalSearchResults} onSearchResultSelect={handleSearchResultSelect} onNavigate={setActiveItem} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
+        <TopBar onLogout={onLogout} title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} searchResults={globalSearchResults} onSearchResultSelect={handleSearchResultSelect} onNavigate={setActiveItem} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
         <main className="app-layout__content">{renderPage()}</main>
       </div>
       {transactionDraft && <TransactionFormModal key={transactionDraft.record?.id || transactionDraft.type} initialType={transactionDraft.type} initialTransaction={transactionDraft.record} isOpen onClose={() => setTransactionDraft(null)} onSave={(payload) => saveTransaction(payload, transactionDraft.record)} businessUnits={settings.businessUnits} products={store.products} customers={store.customers} suppliers={store.suppliers} />}

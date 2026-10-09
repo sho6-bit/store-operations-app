@@ -13,6 +13,7 @@ function TopBar({
   userRole = "Administrator",
   onProfileClick,
   onNavigate,
+  onLogout,
   isDarkMode = false,
   onThemeToggle,
 }) {
@@ -115,10 +116,10 @@ function TopBar({
               <button type="button" role="menuitem" onClick={() => { setIsProfileMenuOpen(false); onNavigate?.("settings") }}>
                 <Settings size={16} aria-hidden="true" /> Pengaturan
               </button>
-              <div className="topbar-profile-dropdown__unavailable" title="Sistem login belum tersedia">
+              <button type="button" role="menuitem" onClick={() => { setIsProfileMenuOpen(false); onLogout?.() }}>
                 <LogOut size={16} aria-hidden="true" />
-                <span><strong>Keluar</strong><small>Perlu sistem login</small></span>
-              </div>
+                <span><strong>Keluar</strong><small>Akhiri sesi akun</small></span>
+              </button>
             </div>
           )}
         </div>

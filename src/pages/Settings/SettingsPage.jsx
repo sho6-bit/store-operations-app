@@ -3,10 +3,12 @@ import { Download, Save, Upload, LogOut } from "lucide-react"
 import Button from "../../components/common/Button"
 import "./settingsPage.css"
 
-function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData }) {
+function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData, onLogout }) {
   const [form, setForm] = useState(settings)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const fileInput = useRef(null)
 
   useEffect(() => setForm(settings), [settings])
@@ -23,23 +25,31 @@ function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData }) {
     setForm((current) => ({ ...current, accounts: { ...current.accounts, [id]: { ...current.accounts[id], [key]: value } } }))
   }
 
-  function save(event) {
+  async function save(event) {
     event.preventDefault()
     if (!form.businessUnits.every((unit) => unit.name.trim()) || !form.businessUnits.every((unit) => form.accounts[unit.id]?.cash.trim() && form.accounts[unit.id]?.bank.trim())) {
       setError("Nama unit usaha serta nama akun kas dan bank wajib diisi.")
       setMessage("")
       return
     }
-    onSaveSettings?.({
+    const nextSettings = {
       ...form,
       storeProfile: { ...form.storeProfile, name: "Toko Noni" },
       businessUnits: form.businessUnits.map((unit) => ({ ...unit, name: unit.name.trim() })),
       stockLowThreshold: Math.max(0, Number(form.stockLowThreshold) || 0),
-    })
+    }
+    setIsSaving(true)
     setError("")
-    setMessage("Pengaturan berhasil disimpan.")
+    setMessage("")
+    try {
+      await onSaveSettings?.(nextSettings)
+      setMessage("Pengaturan berhasil disimpan ke Supabase.")
+    } catch (saveError) {
+      setError(saveError?.message || "Pengaturan belum berhasil disimpan.")
+    } finally {
+      setIsSaving(false)
+    }
   }
-
   function exportBackup() {
     const file = new Blob([JSON.stringify({ store: storeData, settings: form }, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(file)
@@ -72,6 +82,16 @@ function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData }) {
     }
   }
 
+  async function logout() {
+    setIsLoggingOut(true)
+    setError("")
+    try {
+      await onLogout?.()
+    } catch (logoutError) {
+      setError(logoutError?.message || "Gagal keluar. Coba lagi.")
+      setIsLoggingOut(false)
+    }
+  }
   return (
     <section className="setting-page">
       <header className="setting-page__header">
@@ -114,10 +134,9 @@ function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData }) {
         </section>
 
         <section className="setting-card">
-          <div className="setting-card__header"><h2>Akun dan sesi</h2><p>Menu keluar tersedia setelah aplikasi memiliki sistem login dan sesi akun.</p></div>
+          <div className="setting-card__header"><h2>Akun dan sesi</h2><p>Akhiri sesi akun pada perangkat ini.</p></div>
           <div className="setting-backup-actions">
-            <Button type="button" variant="secondary" disabled title="Sistem login belum tersedia"><LogOut size={16} />Keluar belum tersedia</Button>
-            <span className="setting-page__help">Saat ini aplikasi menggunakan profil Admin statis dan menyimpan data di browser ini.</span>
+            <Button type="button" variant="secondary" disabled={isLoggingOut} onClick={logout}><LogOut size={16} />{isLoggingOut ? "Keluar..." : "Keluar"}</Button>
           </div>
         </section>
 
@@ -131,7 +150,7 @@ function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData }) {
         </section>
 
         {(message || error) && <p className={error ? "setting-page__notice setting-page__notice--error" : "setting-page__notice"} role="status">{error || message}</p>}
-        <div className="setting-page__actions"><Button type="submit"><Save size={16} />Simpan pengaturan</Button></div>
+        <div className="setting-page__actions"><Button type="submit" disabled={isSaving}><Save size={16} />{isSaving ? "Menyimpan..." : "Simpan pengaturan"}</Button></div>
       </form>
     </section>
   )
