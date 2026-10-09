@@ -112,7 +112,7 @@
 }
 
 .sales-table__amount {
-  color: #101828 !important;
+  color: var(--color-text-primary) !important;
   font-weight: 600;
 }
 
@@ -205,3 +205,6 @@
 .sales-table__action-heading, .sales-table__action { text-align: center; }
 .sales-edit-button, .purchases-edit-button { display: inline-grid; width: 34px; height: 34px; place-items: center; color: var(--color-text-secondary); background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
 .sales-edit-button:hover, .purchases-edit-button:hover { color: var(--color-primary); background: var(--color-primary-soft); border-color: var(--color-border); }
+
+.settlement-modal__invoice { margin: 0; padding: 12px; color: var(--color-text-secondary); background: var(--color-background-secondary); border-radius: 9px; font-size: 13px; line-height: 1.8; }
+.sales-edit-button--settle { color: var(--color-primary); }

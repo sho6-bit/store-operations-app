@@ -192,3 +192,40 @@ ol {
         animation-iteration-count: 1 !important;
     }
 }
+/* Compact sizing and fit-to-width data tables */
+html { font-size: 15px; }
+body { font-size: 14px; }
+.app-layout__content { padding: 22px 24px; }
+.app-layout :is(table[class$="-table"]) {
+  width: 100%;
+  table-layout: fixed;
+  white-space: normal;
+}
+.app-layout :is(table[class$="-table"]) th,
+.app-layout :is(table[class$="-table"]) td {
+  padding: 9px 8px !important;
+  font-size: 11px !important;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.app-layout .purchases-table th:nth-child(1) { width: 11%; }
+.app-layout .purchases-table th:nth-child(2) { width: 10%; }
+.app-layout .purchases-table th:nth-child(3) { width: 17%; }
+.app-layout .purchases-table th:nth-child(4) { width: 11%; }
+.app-layout .purchases-table th:nth-child(5) { width: 14%; }
+.app-layout .purchases-table th:nth-child(6) { width: 10%; }
+.app-layout .purchases-table th:nth-child(7) { width: 9%; }
+.app-layout .purchases-table th:nth-child(8) { width: 12%; }
+.app-layout .purchases-table th:nth-child(9) { width: 6%; }
+.app-layout .sales-table th:nth-child(1) { width: 15%; }
+.app-layout .sales-table th:nth-child(2) { width: 10%; }
+.app-layout .sales-table th:nth-child(3) { width: 12%; }
+.app-layout .sales-table th:nth-child(4) { width: 12%; }
+.app-layout .sales-table th:nth-child(5) { width: 16%; }
+.app-layout .sales-table th:nth-child(6) { width: 10%; }
+.app-layout .sales-table th:nth-child(7) { width: 15%; }
+.app-layout .sales-table th:nth-child(8) { width: 10%; }
+@media (max-width: 640px) {
+  .app-layout__content { padding: 16px 12px; }
+}

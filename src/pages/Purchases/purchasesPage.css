@@ -112,7 +112,7 @@
 }
 
 .purchases-table__amount {
-  color: #101828 !important;
+  color: var(--color-text-primary) !important;
   font-weight: 600;
 }
 
@@ -205,3 +205,5 @@
 .purchases-table__action-heading, .purchases-table__action { text-align: center; }
 .purchases-edit-button { display: inline-grid; width: 34px; height: 34px; place-items: center; color: var(--color-text-secondary); background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
 .purchases-edit-button:hover { color: var(--color-primary); background: var(--color-primary-soft); border-color: var(--color-border); }
+
+.purchases-status--hutang { color: var(--color-warning); background: var(--color-warning-soft); }

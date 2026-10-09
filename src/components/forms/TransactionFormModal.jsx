@@ -31,7 +31,11 @@ const blankForm = {
   businessUnit: "",
   date: "",
   invoiceNumber: "",
+  dueDate: "",
   paymentMethod: "Cash",
+  paymentChannel: "",
+  downPayment: "",
+  note: "",
   leasingProvider: "",
   partyId: "",
   newPartyName: "",
@@ -77,7 +81,11 @@ function makeInitialForm(transaction, type, products, parties) {
     businessUnit: transaction.businessUnit || "",
     date: transaction.date || "",
     invoiceNumber: transaction.invoiceNumber || transaction.number || "",
+    dueDate: transaction.dueDate || "",
     paymentMethod: transaction.paymentMethod || "",
+    paymentChannel: transaction.paymentChannel || "",
+    downPayment: transaction.downPayment == null ? "" : String(transaction.downPayment),
+    note: transaction.note || "",
     leasingProvider: transaction.leasingProvider || "",
     partyId: matchingParty?.id || (partyName ? "__new__" : ""),
     newPartyName: matchingParty ? "" : partyName || "",
@@ -101,6 +109,7 @@ function TransactionFormModal({
   const [form, setForm] = useState(() => makeInitialForm(initialTransaction, initialType, products, initialParties))
   const [error, setError] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const hasRecordedSettlements = Boolean(initialTransaction?.settlements?.length)
 
   function update(name, value) {
     setForm((current) => ({ ...current, [name]: value }))
@@ -130,12 +139,30 @@ function TransactionFormModal({
     onClose?.()
   }
 
+  function handleBusinessUnitChange(businessUnit) {
+    setForm((current) => ({
+      ...current,
+      businessUnit,
+      items: current.items.map((item) => {
+        const product = products.find((entry) => entry.id === item.productId)
+        const productUnit = product?.businessUnitId ?? product?.businessUnit
+        return productUnit && productUnit !== businessUnit
+          ? { ...item, productId: "", unitPrice: "" }
+          : item
+      }),
+    }))
+  }
+
   function handleTypeChange(type) {
     setForm((current) => ({
       ...current,
       type,
       partyId: "",
       paymentMethod: "Cash",
+      dueDate: "",
+      paymentChannel: "",
+      downPayment: "",
+      note: "",
       leasingProvider: "",
     }))
   }
@@ -154,6 +181,10 @@ function TransactionFormModal({
   }
 
   const partyOptions = form.type === "sale" ? customers : suppliers
+  const availableProducts = products.filter((product) => {
+    const productUnit = product.businessUnitId ?? product.businessUnit
+    return !form.businessUnit || !productUnit || productUnit === form.businessUnit
+  })
   const invoiceSubtotal = form.items.reduce((total, item) => {
     return total + Math.max(0, (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) - (Number(item.discount) || 0))
   }, 0)
@@ -176,6 +207,10 @@ function TransactionFormModal({
     }
     if (!form.paymentMethod) {
       setError("Pilih metode pembayaran.")
+      return
+    }
+    if (form.type === "purchase" && form.paymentMethod === "Hutang Usaha" && !form.dueDate) {
+      setError("Tanggal jatuh tempo wajib diisi untuk Hutang Usaha.")
       return
     }
     if (form.type === "sale" && form.paymentMethod === "Kredit" && !form.leasingProvider) {
@@ -243,6 +278,18 @@ function TransactionFormModal({
       return
     }
 
+    const invoiceTotal = lineProducts.reduce((total, line) => total + line.quantity * line.unitPrice - line.discount, 0)
+    if (form.type === "sale" && form.paymentMethod === "DP") {
+      if (!form.paymentChannel) {
+        setError("Pilih saluran pembayaran untuk DP.")
+        return
+      }
+      if (!form.downPayment || Number(form.downPayment) <= 0 || Number(form.downPayment) >= invoiceTotal) {
+        setError("Nominal DP harus lebih dari nol dan kurang dari total invoice. Untuk pembayaran penuh, pilih metode pembayaran lunas.")
+        return
+      }
+    }
+
     const existingParty = partyOptions.find((party) => party.id === form.partyId)
     const payload = {
       type: form.type,
@@ -250,7 +297,11 @@ function TransactionFormModal({
       date: form.date,
       transactionId: initialTransaction?.id,
       invoiceNumber: form.invoiceNumber.trim(),
+      dueDate: form.type === "purchase" && form.paymentMethod === "Hutang Usaha" ? form.dueDate : "",
       paymentMethod: form.paymentMethod,
+      paymentChannel: form.type === "sale" && form.paymentMethod === "DP" ? form.paymentChannel : "",
+      downPayment: form.type === "sale" && form.paymentMethod === "DP" ? Number(form.downPayment) : 0,
+      note: form.type === "sale" && form.paymentMethod === "DP" ? form.note.trim() : "",
       leasingProvider: form.paymentMethod === "Kredit" ? form.leasingProvider : "",
       party: form.partyId === "__new__"
         ? { name: form.newPartyName.trim(), address: form.newPartyAddress.trim(), phone: form.newPartyPhone.trim() }
@@ -287,7 +338,7 @@ function TransactionFormModal({
         <div className="transaction-form__grid">
           <label className="transaction-form__field">
             <span>Unit usaha <b>*</b></span>
-            <select value={form.businessUnit} onChange={(event) => update("businessUnit", event.target.value)} required>
+            <select value={form.businessUnit} onChange={(event) => handleBusinessUnitChange(event.target.value)} required disabled={Boolean(initialTransaction)}>
               <option value="">Pilih unit usaha</option>
               {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.label}</option>)}
             </select>
@@ -309,14 +360,43 @@ function TransactionFormModal({
           </label>
           <label className="transaction-form__field">
             <span>Metode pembayaran <b>*</b></span>
-            <select value={form.paymentMethod} onChange={(event) => { update("paymentMethod", event.target.value); update("leasingProvider", "") }} required>
+            <select value={form.paymentMethod} onChange={(event) => { update("paymentMethod", event.target.value); update("leasingProvider", "") }} required disabled={hasRecordedSettlements}>
               {!form.paymentMethod && <option value="">Pilih metode pembayaran</option>}
               <option value="Cash">Cash</option>
               {form.type === "sale" && <option value="QRIS">QRIS</option>}
               <option value="Transfer Bank">Transfer Bank</option>
-              {form.type === "sale" && <option value="Kredit">Kredit</option>}
+              {form.type === "sale" && <option value="Kredit">Kredit · dilunasi leasing</option>}
+              {form.type === "sale" && <option value="DP">DP</option>}
+              {form.type === "purchase" && <option value="Hutang Usaha">Hutang Usaha</option>}
             </select>
           </label>
+          {form.type === "purchase" && form.paymentMethod === "Hutang Usaha" && (
+            <label className="transaction-form__field">
+              <span>Tanggal jatuh tempo <b>*</b></span>
+              <input type="date" value={form.dueDate} onChange={(event) => update("dueDate", event.target.value)} required />
+            </label>
+          )}
+          {form.type === "sale" && form.paymentMethod === "DP" && (
+            <>
+              <label className="transaction-form__field">
+                <span>Nominal DP (Rp) <b>*</b></span>
+                <input type="number" min="1" step="1" value={form.downPayment} onChange={(event) => update("downPayment", event.target.value)} required disabled={hasRecordedSettlements} />
+              </label>
+              <label className="transaction-form__field">
+                <span>DP diterima melalui <b>*</b></span>
+                <select value={form.paymentChannel} onChange={(event) => update("paymentChannel", event.target.value)} required disabled={hasRecordedSettlements}>
+                  <option value="">Pilih saluran pembayaran</option>
+                  <option value="Cash">Cash</option>
+                  <option value="QRIS">QRIS</option>
+                  <option value="Transfer Bank">Transfer Bank</option>
+                </select>
+              </label>
+              <label className="transaction-form__field transaction-form__field--wide">
+                <span>Catatan DP</span>
+                <textarea rows="2" value={form.note} onChange={(event) => update("note", event.target.value)} placeholder="Contoh: barang tempahan atau dibayar sekarang, diantar nanti" />
+              </label>
+            </>
+          )}
           {form.type === "sale" && form.paymentMethod === "Kredit" && (
             <label className="transaction-form__field">
               <span>Leasing <b>*</b></span>
@@ -360,7 +440,7 @@ function TransactionFormModal({
           <div className="transaction-form__items">
             {form.items.map((item, index) => {
               const isNewProduct = item.productId === "__new__"
-              const chosenProduct = products.find((product) => product.id === item.productId)
+              const chosenProduct = availableProducts.find((product) => product.id === item.productId)
               const lineTotal = Math.max(0, Number(item.quantity || 0) * Number(item.unitPrice || 0) - Number(item.discount || 0))
               return (
                 <article className="transaction-item" key={item.id}>
@@ -372,7 +452,7 @@ function TransactionFormModal({
                     <span>SKU / produk <b>*</b></span>
                     <select value={item.productId} onChange={(event) => handleProductChange(item.id, event.target.value)} required>
                       <option value="">Pilih produk</option>
-                      {products.map((product) => <option key={product.id} value={product.id}>{product.sku} · {product.name}</option>)}
+                      {availableProducts.map((product) => <option key={product.id} value={product.id}>{product.sku} · {product.name}</option>)}
                       <option value="__new__">+ Buat produk / SKU baru</option>
                     </select>
                   </label>

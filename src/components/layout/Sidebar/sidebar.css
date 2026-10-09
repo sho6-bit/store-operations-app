@@ -777,7 +777,7 @@
 .sidebar--collapsed .sidebar__collapse-button {
     position: absolute;
 
-    top: 86px;
+    top: 56px;
     right: -13px;
 
     width: 26px;
@@ -924,4 +924,27 @@
     .sidebar__profile-icon {
         display: none;
     }
+}
+/* Compact desktop sidebar so the full navigation fits more comfortably */
+@media (min-width: 901px) {
+  .sidebar__header { height: 88px; padding-right: 18px; padding-left: 20px; }
+  .sidebar__logo { width: 48px; height: 48px; font-size: 18px; }
+  .sidebar__brand-text h1 { font-size: 18px; }
+  .sidebar__brand { gap: 12px; }
+  .sidebar__business-unit { margin: 4px 14px 18px; }
+  .sidebar__selection-label { margin: 0 12px 6px; font-size: 10px; }
+  .business-unit-selector { min-height: 66px; gap: 10px; padding: 9px 11px; border-radius: 12px; }
+  .business-unit-selector__icon { width: 40px; height: 40px; border-radius: 11px; }
+  .business-unit-dot { width: 20px; height: 20px; }
+  .business-unit-dot::after { font-size: 13px; }
+  .business-unit-selector__content strong { font-size: 13px; }
+  .sidebar__navigation { padding-right: 14px; padding-left: 14px; }
+  .sidebar__menu { gap: 3px; }
+  .sidebar__menu-item { min-height: 46px; gap: 12px; padding: 0 14px; border-radius: 11px; font-size: 13px; }
+  .sidebar__menu-icon { width: 21px; height: 21px; }
+  .sidebar__bottom { padding: 10px 14px 12px; }
+  .sidebar__profile { min-height: 48px; gap: 9px; padding: 5px 7px; }
+  .sidebar-avatar { width: 36px; height: 36px; font-size: 12px; }
+  .sidebar__profile-info strong { font-size: 12px; }
+  .sidebar__profile-info span { font-size: 9px; }
 }

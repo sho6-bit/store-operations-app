@@ -89,6 +89,7 @@ function Sidebar({
   onNavigate,
   selectedBusinessUnit = "all",
   onBusinessUnitChange,
+  onCollapsedChange,
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [showBusinessUnits, setShowBusinessUnits] = useState(false)
@@ -125,7 +126,11 @@ function Sidebar({
         <button
           type="button"
           className="sidebar__collapse-button"
-          onClick={() => setCollapsed((current) => !current)}
+          onClick={() => setCollapsed((current) => {
+            const next = !current
+            onCollapsedChange?.(next)
+            return next
+          })}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (

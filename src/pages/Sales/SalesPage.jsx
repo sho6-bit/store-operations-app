@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 
-import { Pencil, Plus } from "lucide-react"
+import { CircleDollarSign, Pencil, Plus } from "lucide-react"
 import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
@@ -16,14 +16,14 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function SalesPage({ data = [], onCreateTransaction, onEditTransaction }) {
+function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettleTransaction }) {
   const [searchTerm, setSearchTerm] = useState("")
   const sales = Array.isArray(data) ? data : []
   const totalSales = sales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
   const unpaidSales = sales.filter((sale) =>
     ["piutang", "belum lunas", "belum dibayar"].includes(String(sale.status || "").trim().toLowerCase()),
   )
-  const unpaidTotal = unpaidSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
+  const unpaidTotal = unpaidSales.reduce((sum, sale) => sum + (Number(sale.remainingAmount ?? sale.total) || 0), 0)
 
   const filteredSales = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -33,6 +33,7 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction }) {
       [
         sale.number,
         sale.customer,
+        sale.businessUnit,
         sale.paymentMethod,
         sale.status,
         sale.leasingProvider,
@@ -85,6 +86,7 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction }) {
                   <th>Nomor transaksi</th>
                   <th>Tanggal</th>
                   <th>Pelanggan</th>
+                  <th>Unit usaha</th>
                   <th>Metode pembayaran</th>
                   <th>Status</th>
                   <th className="sales-table__amount-heading">Total</th>
@@ -100,9 +102,12 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction }) {
                     </td>
                     <td>{sale.date || "—"}</td>
                     <td>{sale.customer || "—"}</td>
+                    <td>{{ furniture: "Furniture", "electronic-1": "Electronic 1", "electronic-2": "Electronic 2" }[sale.businessUnit] || sale.businessUnit || "—"}</td>
                     <td>{sale.paymentMethod === "Kredit" && sale.leasingProvider
                       ? "Kredit · " + sale.leasingProvider
-                      : sale.paymentMethod || "—"}</td>
+                      : sale.paymentMethod === "DP" && sale.paymentChannel
+                        ? "DP · " + sale.paymentChannel
+                        : sale.paymentMethod || "—"}</td>
                     <td>
                       {sale.status ? (
                         <span
@@ -122,6 +127,7 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction }) {
                       {formatCurrency(sale.total)}
                     </td>
                     <td className="sales-table__action">
+                      {Number(sale.remainingAmount ?? 0) > 0 && <button className="sales-edit-button sales-edit-button--settle" type="button" onClick={() => onSettleTransaction?.(sale)} aria-label={"Catat pelunasan " + (sale.number || "")} title="Catat pelunasan"><CircleDollarSign size={16} /></button>}
                       <button className="sales-edit-button" type="button" onClick={() => onEditTransaction?.(sale)} aria-label={"Edit transaksi " + (sale.number || "") } title="Edit transaksi">
                         <Pencil size={16} />
                       </button>

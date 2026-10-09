@@ -14,6 +14,7 @@ import SettingPage from "../../pages/Settings/SettingsPage.jsx"
 import SuppliersPage from "../../pages/Suppliers/SuppliersPage.jsx"
 import TransactionFormModal from "../forms/TransactionFormModal.jsx"
 import CashEntryModal from "../forms/CashEntryModal.jsx"
+import SettlementModal from "../../pages/Sales/SettlementModal.jsx"
 import { createId, readStoreData, writeStoreData } from "../../services/dataProvider.js"
 
 const pageTitles = {
@@ -27,12 +28,14 @@ function sum(values) {
 
 function AppLayout() {
   const [activeItem, setActiveItem] = useState("dashboard")
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState("all")
   const [searchValue, setSearchValue] = useState("")
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [store, setStore] = useState(readStoreData)
   const [transactionDraft, setTransactionDraft] = useState(null)
   const [isCashModalOpen, setIsCashModalOpen] = useState(false)
+  const [settlementSale, setSettlementSale] = useState(null)
 
   useEffect(() => { writeStoreData(store) }, [store])
 
@@ -70,6 +73,11 @@ function AppLayout() {
     )
     if (duplicate) throw new Error("Nomor invoice tersebut sudah digunakan pada transaksi sejenis.")
 
+    const unitMismatch = payload.items.find((item) => {
+      const productUnit = item.product.businessUnitId ?? item.product.businessUnit
+      return productUnit && productUnit !== payload.businessUnit
+    })
+    if (unitMismatch) throw new Error("Produk harus berasal dari unit usaha yang sama dengan transaksi.")
     const newSkus = payload.items.filter((item) => !item.product.id).map((item) => item.product.sku.toLowerCase())
     if (newSkus.some((sku) => store.products.some((product) => product.sku?.toLowerCase() === sku))) {
       throw new Error("Salah satu SKU produk baru sudah terdaftar. Pilih produk yang tersedia.")
@@ -91,26 +99,41 @@ function AppLayout() {
     })
     const total = sum(lineItems.map((item) => item.total))
     const recordId = existingTransaction?.id || createId()
+    const existingSettlements = existingTransaction?.settlements || []
+    const settlementTotal = sum(existingSettlements.map((payment) => payment.amount))
+    const isBusinessDebt = payload.type === "purchase" && payload.paymentMethod === "Hutang Usaha"
+    const initialPaymentAmount = isBusinessDebt ? 0 : payload.paymentMethod === "DP" ? payload.downPayment : total
+    if (settlementTotal + initialPaymentAmount > total) {
+      throw new Error("Total invoice tidak boleh lebih kecil dari pembayaran yang sudah diterima.")
+    }
+    const paidAmount = initialPaymentAmount + settlementTotal
     const record = {
       id: recordId, number: payload.invoiceNumber, invoiceNumber: payload.invoiceNumber,
       date: payload.date, businessUnit: payload.businessUnit, partyId: party.id,
       customer: payload.type === "sale" ? party.name : undefined,
       supplier: payload.type === "purchase" ? party.name : undefined,
       paymentMethod: payload.paymentMethod,
+      paymentChannel: payload.paymentChannel || "",
       leasingProvider: payload.leasingProvider || "",
+      dueDate: payload.dueDate || "",
+      downPayment: payload.paymentMethod === "DP" ? payload.downPayment : 0,
+      paidAmount,
+      remainingAmount: Math.max(0, total - paidAmount),
+      note: payload.note || "",
+      settlements: existingSettlements,
       items: lineItems.map(({ product, ...item }) => item),
       total,
-      status: payload.type === "sale" && payload.paymentMethod === "Kredit" ? "Piutang" : "Lunas",
+      status: isBusinessDebt ? "Hutang" : payload.type === "sale" && paidAmount < total ? "Piutang" : "Lunas",
     }
-    const cashMovement = payload.paymentMethod === "Kredit" ? null : {
+    const cashMovement = isBusinessDebt ? null : {
       id: createId(),
       sourceTransactionId: recordId,
       date: payload.date,
       businessUnit: payload.businessUnit,
       type: payload.type === "sale" ? "income" : "expense",
-      accountType: payload.paymentMethod === "Cash" ? "cash" : "bank",
-      account: payload.paymentMethod,
-      amount: total,
+      accountType: (payload.paymentMethod === "DP" ? payload.paymentChannel : payload.paymentMethod) === "Cash" ? "cash" : "bank",
+      account: payload.paymentMethod === "Kredit" ? "Kredit · " + payload.leasingProvider : payload.paymentMethod === "DP" ? payload.paymentChannel : payload.paymentMethod,
+      amount: initialPaymentAmount,
       category: payload.type === "sale" ? "Penjualan" : "Pembelian",
       description: (payload.type === "sale" ? "Penjualan " : "Pembelian ") + payload.invoiceNumber + (party.name ? " · " + party.name : ""),
       reference: payload.invoiceNumber,
@@ -146,6 +169,7 @@ function AppLayout() {
         return {
           ...product,
           ...(stockChange == null ? {} : { stock: Math.max(0, (Number(product.stock) || 0) + stockChange) }),
+          ...(product.businessUnit ? {} : { businessUnit: payload.businessUnit }),
           ...(payload.type === "purchase" && updatedLine ? { costPrice: updatedLine.unitPrice } : {}),
         }
       })
@@ -171,6 +195,34 @@ function AppLayout() {
     })
   }
 
+  function saveSettlement({ transactionId, date, channel }) {
+    const sale = store.sales.find((item) => item.id === transactionId)
+    if (!sale) throw new Error("Transaksi penjualan tidak ditemukan.")
+    const remaining = Number(sale.remainingAmount ?? (sale.total - (sale.paidAmount || 0)))
+    if (remaining <= 0) throw new Error("Transaksi ini sudah lunas.")
+    const settlementId = createId()
+    const payment = { id: settlementId, date, method: channel, amount: remaining }
+    const movement = {
+      id: createId(), sourceSettlementId: settlementId, transactionId: sale.id,
+      date, businessUnit: sale.businessUnit, type: "income",
+      accountType: channel === "Cash" ? "cash" : "bank", account: channel,
+      amount: remaining, category: "Pelunasan Penjualan",
+      description: "Pelunasan invoice " + sale.number + (sale.customer ? " · " + sale.customer : ""),
+      reference: sale.number, paymentMethod: channel,
+    }
+    setStore((current) => ({
+      ...current,
+      sales: current.sales.map((item) => item.id === sale.id ? {
+        ...item,
+        settlements: [...(item.settlements || []), payment],
+        paidAmount: Number(item.paidAmount || 0) + remaining,
+        remainingAmount: 0,
+        status: "Lunas",
+      } : item),
+      cashTransactions: [...current.cashTransactions, movement],
+    }))
+  }
+
   function saveCashEntry(entry) {
     setStore((current) => ({ ...current, cashTransactions: [...current.cashTransactions, { ...entry, id: createId() }] }))
   }
@@ -193,14 +245,14 @@ function AppLayout() {
         sales: selectedSales.length ? sum(selectedSales.map((item) => item.total)) : null,
         purchases: selectedPurchases.length ? sum(selectedPurchases.map((item) => item.total)) : null,
         cashAndBank: selectedCash.length ? sum(selectedCash.map((item) => item.type === "income" ? item.amount : -item.amount)) : null,
-        receivables: selectedSales.some((item) => item.paymentMethod === "Kredit")
-          ? sum(selectedSales.filter((item) => item.paymentMethod === "Kredit").map((item) => item.total))
+        receivables: selectedSales.some((item) => item.paymentMethod === "DP")
+          ? sum(selectedSales.filter((item) => item.paymentMethod === "DP").map((item) => Number(item.remainingAmount ?? (item.total - (item.downPayment || 0)))))
           : null,
       },
       salesOverview: Array.from(byDate, ([label, value]) => ({ id: label, label, value })),
       salesByUnit: Array.from(byUnit, ([label, value]) => ({ id: label, label, value })),
       cashFlow: selectedCash.map((item) => ({ ...item, label: item.description, value: item.amount })),
-      lowStock: store.products.filter((item) => item.minStock != null && Number(item.stock) <= Number(item.minStock)),
+      lowStock: store.products.filter((item) => Number(item.stock) > 0 && Number(item.stock) <= Number(item.reorderLevel ?? item.minStock ?? 1)),
       recentTransactions: recent,
     }
   }, [selectedSales, selectedPurchases, selectedCash, store.products])
@@ -225,17 +277,26 @@ function AppLayout() {
     }
   }, [store.cashTransactions, selectedCash])
 
-  const reportData = useMemo(() => ({
-    summary: [],
-    rows: [
-      ...selectedSales.map((item) => ({ id: item.id, date: item.date, businessUnit: item.businessUnit, type: "Penjualan", description: item.customer, category: "Penjualan", amount: item.total })),
-      ...selectedPurchases.map((item) => ({ id: item.id, date: item.date, businessUnit: item.businessUnit, type: "Pembelian", description: item.supplier, category: "Pembelian", amount: item.total })),
-      ...selectedCash.map((item) => ({ ...item, type: item.type === "income" ? "Kas masuk" : "Kas keluar", category: item.category, amount: item.amount })),
-    ],
-  }), [selectedSales, selectedPurchases, selectedCash])
+  const reportData = useMemo(() => {
+    const manualCashEntries = selectedCash.filter((item) => {
+      const category = String(item.category || "").trim().toLowerCase()
+      const isLinkedToTransaction = item.sourceTransactionId || item.sourceSettlementId || item.transactionId
+      const isTransactionCategory = ["penjualan", "pembelian", "pelunasan penjualan"].includes(category)
+      return !isLinkedToTransaction && !isTransactionCategory
+    })
+
+    return {
+      summary: [],
+      rows: [
+        ...selectedSales.map((item) => ({ id: item.id, date: item.date, businessUnit: item.businessUnit, type: "Penjualan", description: item.customer, category: "Penjualan", amount: item.total })),
+        ...selectedPurchases.map((item) => ({ id: item.id, date: item.date, businessUnit: item.businessUnit, type: "Pembelian", description: item.supplier, category: "Pembelian", amount: item.total })),
+        ...manualCashEntries.map((item) => ({ ...item, type: item.type === "income" ? "Kas masuk" : "Kas keluar", category: item.category, amount: item.amount })),
+      ],
+    }
+  }, [selectedSales, selectedPurchases, selectedCash])
 
   function renderPage() {
-    if (activeItem === "sales") return <SalesPage data={selectedSales} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "sale", record })} />
+    if (activeItem === "sales") return <SalesPage data={selectedSales} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "sale", record })} onSettleTransaction={setSettlementSale} />
     if (activeItem === "purchases") return <PurchasesPage data={selectedPurchases} onCreateTransaction={() => setTransactionDraft({ type: "purchase", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "purchase", record })} />
     if (activeItem === "inventory") return <InventoryPage data={store.products} onSaveProduct={saveProduct} />
     if (activeItem === "customers") return <CustomersPage data={store.customers} onCreateCustomer={saveCustomer} onUpdateCustomer={updateCustomer} onDeleteCustomer={deleteCustomer} />
@@ -247,14 +308,15 @@ function AppLayout() {
   }
 
   return (
-    <div className={"app-layout " + (isDarkMode ? "app-layout--dark" : "")} data-theme={isDarkMode ? "dark" : "light"}>
-      <Sidebar activeItem={activeItem} onNavigate={setActiveItem} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} />
+    <div className={"app-layout " + (isDarkMode ? "app-layout--dark " : "") + (isSidebarCollapsed ? "app-layout--collapsed" : "")} data-theme={isDarkMode ? "dark" : "light"}>
+      <Sidebar activeItem={activeItem} onNavigate={setActiveItem} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} onCollapsedChange={setIsSidebarCollapsed} />
       <div className="app-layout__main">
         <TopBar title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
         <main className="app-layout__content">{renderPage()}</main>
       </div>
       {transactionDraft && <TransactionFormModal key={transactionDraft.record?.id || transactionDraft.type} initialType={transactionDraft.type} initialTransaction={transactionDraft.record} isOpen onClose={() => setTransactionDraft(null)} onSave={(payload) => saveTransaction(payload, transactionDraft.record)} products={store.products} customers={store.customers} suppliers={store.suppliers} />}
       <CashEntryModal isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} onSave={saveCashEntry} />
+      {settlementSale && <SettlementModal sale={settlementSale} onClose={() => setSettlementSale(null)} onSave={saveSettlement} />}
     </div>
   )
 }

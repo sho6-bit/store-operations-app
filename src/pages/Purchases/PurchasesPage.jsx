@@ -21,16 +21,16 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction }) {
   const purchases = Array.isArray(data) ? data : []
   const totalPurchases = purchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
   const pendingPurchases = purchases.filter((purchase) =>
-    ["menunggu", "pending", "belum lunas", "belum dibayar"].includes(String(purchase.status || "").trim().toLowerCase()),
+    ["menunggu", "pending", "belum lunas", "belum dibayar", "hutang"].includes(String(purchase.status || "").trim().toLowerCase()),
   )
-  const pendingTotal = pendingPurchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
+  const pendingTotal = pendingPurchases.reduce((sum, purchase) => sum + (Number(purchase.remainingAmount ?? purchase.total) || 0), 0)
 
   const filteredPurchases = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
     if (!query) return purchases
 
     return purchases.filter((purchase) =>
-      [purchase.number, purchase.supplier, purchase.status, purchase.paymentMethod, purchase.date]
+      [purchase.number, purchase.supplier, purchase.businessUnit, purchase.status, purchase.paymentMethod, purchase.date, purchase.dueDate]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query)),
     )
@@ -52,7 +52,7 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction }) {
       <SummaryCards cards={[
         { label: "Total pembelian", value: purchases.length ? formatCurrency(totalPurchases) : "—", detail: "Total catatan yang tersedia", tone: "purple" },
         { label: "Transaksi pembelian", value: purchases.length, detail: "Jumlah catatan pembelian", tone: "blue" },
-        { label: "Menunggu", value: pendingPurchases.length ? formatCurrency(pendingTotal) : "—", detail: pendingPurchases.length + " transaksi berstatus menunggu", tone: "orange" },
+        { label: "Hutang aktif", value: pendingPurchases.length ? formatCurrency(pendingTotal) : "—", detail: pendingPurchases.length + " transaksi belum dibayar", tone: "orange" },
       ]} />
 
       <section className="purchases-card" aria-label="Daftar pembelian">
@@ -78,7 +78,9 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction }) {
                   <th>Nomor</th>
                   <th>Tanggal</th>
                   <th>Supplier</th>
+                  <th>Unit usaha</th>
                   <th>Metode pembayaran</th>
+                  <th>Jatuh tempo</th>
                   <th>Status</th>
                   <th className="purchases-table__amount-heading">Total</th>
                   <th className="purchases-table__action-heading">Aksi</th>
@@ -93,7 +95,9 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction }) {
                     </td>
                     <td>{purchase.date || "—"}</td>
                     <td>{purchase.supplier || "—"}</td>
+                    <td>{{ furniture: "Furniture", "electronic-1": "Electronic 1", "electronic-2": "Electronic 2" }[purchase.businessUnit] || purchase.businessUnit || "—"}</td>
                     <td>{purchase.paymentMethod || "—"}</td>
+                    <td>{purchase.dueDate || "—"}</td>
                     <td>
                       {purchase.status ? (
                         <span
