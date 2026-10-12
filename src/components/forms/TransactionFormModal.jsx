@@ -18,6 +18,10 @@ function createBlankItem() {
     productId: "",
     newSku: "",
     newProductName: "",
+    newCategory: "",
+    productSearch: "",
+    productPickerOpen: false,
+    masterProductId: "",
     newCostPrice: "",
     newSalePrice: "",
     quantity: "",
@@ -60,12 +64,16 @@ function makeInitialForm(transaction, type, products, parties) {
         }]
       : []
   const items = originalItems.map((line) => {
-    const product = products.find((entry) => entry.id === line.productId || (line.sku && entry.sku?.toLowerCase() === String(line.sku).toLowerCase()))
+    const product = products.find((entry) => entry.id === line.productId && (entry.businessUnitId ?? entry.businessUnit) === transaction.businessUnit)
+      || products.find((entry) => (entry.businessUnitId ?? entry.businessUnit) === transaction.businessUnit && line.sku && entry.sku?.toLowerCase() === String(line.sku).toLowerCase())
     return {
       ...createBlankItem(),
       productId: product?.id || "__new__",
       newSku: product ? "" : line.sku || "",
       newProductName: product ? "" : line.productName || "",
+      newCategory: product ? product.category || "" : line.category || "",
+      productSearch: product ? product.sku + " · " + product.name : line.sku || line.productName || "",
+      masterProductId: "",
       newCostPrice: "",
       newSalePrice: "",
       quantity: line.quantity == null ? "" : String(line.quantity),
@@ -102,6 +110,7 @@ function TransactionFormModal({
   onClose,
   onSave,
   products = [],
+  purchases = [],
   customers = [],
   suppliers = [],
   businessUnits = defaultUnits,
@@ -141,17 +150,7 @@ function TransactionFormModal({
   }
 
   function handleBusinessUnitChange(businessUnit) {
-    setForm((current) => ({
-      ...current,
-      businessUnit,
-      items: current.items.map((item) => {
-        const product = products.find((entry) => entry.id === item.productId)
-        const productUnit = product?.businessUnitId ?? product?.businessUnit
-        return productUnit && productUnit !== businessUnit
-          ? { ...item, productId: "", unitPrice: "" }
-          : item
-      }),
-    }))
+    setForm((current) => ({ ...current, businessUnit, items: current.items.map((item) => ({ ...item, productId: "", productSearch: "", productPickerOpen: false, unitPrice: "" })) }))
   }
 
   function handleTypeChange(type) {
@@ -176,16 +175,52 @@ function TransactionFormModal({
     setForm((current) => ({
       ...current,
       items: current.items.map((item) => item.id === itemId
-        ? { ...item, productId, unitPrice: suggestedPrice == null ? "" : String(suggestedPrice) }
+        ? { ...item, productId, productSearch: product ? product.sku + " · " + product.name : "", productPickerOpen: false, unitPrice: suggestedPrice == null ? "" : String(suggestedPrice) }
         : item),
     }))
   }
 
+  function handleMasterProductChange(itemId, productId) {
+    const product = products.find((entry) => entry.id === productId)
+    if (!product) return
+    const localProduct = products.find((entry) =>
+      (entry.businessUnitId ?? entry.businessUnit) === form.businessUnit &&
+      String(entry.sku || "").toLocaleLowerCase("id-ID") === String(product.sku || "").toLocaleLowerCase("id-ID"),
+    )
+    const suggestedPrice = form.type === "sale" ? product.referencePrice ?? product.price : product.costPrice ?? product.cost
+    setForm((current) => ({
+      ...current,
+      items: current.items.map((entry) => entry.id !== itemId ? entry : {
+        ...entry,
+        productId: localProduct ? localProduct.id : "__new__",
+        newSku: localProduct ? "" : product.sku || "",
+        newProductName: localProduct ? "" : product.name || "",
+        newCategory: localProduct ? "" : product.category || "",
+        masterProductId: localProduct ? "" : product.id,
+        newCostPrice: localProduct ? "" : String(product.costPrice ?? product.cost ?? ""),
+        newSalePrice: localProduct ? "" : String(product.referencePrice ?? product.price ?? ""),
+        productSearch: product.sku + " · " + product.name,
+        productPickerOpen: false,
+        unitPrice: suggestedPrice == null ? "" : String(suggestedPrice),
+      }),
+    }))
+  }
+
   const partyOptions = form.type === "sale" ? customers : suppliers
-  const availableProducts = products.filter((product) => {
-    const productUnit = product.businessUnitId ?? product.businessUnit
-    return !form.businessUnit || !productUnit || productUnit === form.businessUnit
-  })
+  const localProducts = products.filter((product) => (product.businessUnitId ?? product.businessUnit) === form.businessUnit)
+  const previouslyPurchasedIds = new Set(purchases
+    .filter((purchase) => purchase.businessUnit === form.businessUnit)
+    .flatMap((purchase) => (purchase.items || []).map((line) => line.productId).filter(Boolean)))
+  const previouslyPurchasedSkus = new Set(purchases
+    .filter((purchase) => purchase.businessUnit === form.businessUnit)
+    .flatMap((purchase) => (purchase.items || []).map((line) => String(line.sku || "").toLocaleLowerCase("id-ID")).filter(Boolean)))
+  const availableProducts = localProducts.filter((product) => previouslyPurchasedIds.has(product.id) || previouslyPurchasedSkus.has(String(product.sku || "").toLocaleLowerCase("id-ID")))
+    .sort((a, b) => String(a.name || a.sku || "").localeCompare(String(b.name || b.sku || ""), "id", { sensitivity: "base" }))
+  const masterProducts = [...new Map(products.map((product) => [String(product.sku || product.name).toLocaleLowerCase("id-ID"), product])).values()]
+    .sort((a, b) => String(a.name || a.sku || "").localeCompare(String(b.name || b.sku || ""), "id", { sensitivity: "base" }))
+  const unitProductOptions = [...new Map([...(form.type === "purchase" ? masterProducts : []), ...availableProducts]
+    .map((product) => [String(product.sku || product.name).toLocaleLowerCase("id-ID"), product])).values()]
+  const productCategories = [...new Set(products.map((product) => product.category).filter(Boolean))]
   const invoiceSubtotal = form.items.reduce((total, item) => {
     return total + Math.max(0, (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) - (Number(item.discount) || 0))
   }, 0)
@@ -250,12 +285,16 @@ function TransactionFormModal({
       const existingProduct = item.productId === "__new__"
         ? null
         : products.find((product) => product.id === item.productId)
+      const masterProduct = item.masterProductId ? products.find((entry) => entry.id === item.masterProductId) : null
       const product = existingProduct || {
         sku: item.newSku.trim(),
         name: item.newProductName.trim(),
-        costPrice: Number(item.newCostPrice) || 0,
-        referencePrice: Number(item.newSalePrice) || 0,
-        price: Number(item.newSalePrice) || 0,
+        category: item.newCategory.trim(),
+        costPrice: Number(item.newCostPrice) || Number(masterProduct?.costPrice ?? masterProduct?.cost) || 0,
+        referencePrice: Number(item.newSalePrice) || Number(masterProduct?.referencePrice ?? masterProduct?.price) || 0,
+        price: Number(item.newSalePrice) || Number(masterProduct?.referencePrice ?? masterProduct?.price) || 0,
+        businessUnit: form.businessUnit,
+        stock: 0,
       }
       const productKey = String(product.id || product.sku).toLowerCase()
       if (lineProducts.some((line) => line.key === productKey)) {
@@ -272,7 +311,11 @@ function TransactionFormModal({
     }
 
     const duplicateNewSku = lineProducts.find((line) =>
-      !line.product.id && products.some((product) => product.sku?.toLowerCase() === line.product.sku.toLowerCase()),
+      !line.product.id && products.some((product) =>
+        product.sku?.toLowerCase() === line.product.sku.toLowerCase() &&
+        (product.businessUnitId ?? product.businessUnit) === form.businessUnit &&
+        !initialTransaction?.items?.some((originalLine) => originalLine.productId === product.id || originalLine.sku?.toLowerCase() === product.sku?.toLowerCase()),
+      ),
     )
     if (duplicateNewSku) {
       setError("SKU " + duplicateNewSku.product.sku + " sudah terdaftar. Pilih produk yang tersedia.")
@@ -308,7 +351,11 @@ function TransactionFormModal({
         ? { name: form.newPartyName.trim(), address: form.newPartyAddress.trim(), phone: form.newPartyPhone.trim() }
         : { id: existingParty?.id, name: existingParty?.name },
       items: lineProducts.map((line) => ({
-        product: line.product,
+        product: line.product.id && (line.product.businessUnitId ?? line.product.businessUnit) && (line.product.businessUnitId ?? line.product.businessUnit) !== form.businessUnit
+          ? { ...line.product, id: "", stock: 0, businessUnit: form.businessUnit }
+          : !line.product.id
+            ? { ...line.product, businessUnit: form.businessUnit, stock: 0 }
+            : line.product,
         quantity: line.quantity,
         unitPrice: line.unitPrice,
         discount: line.discount,
@@ -438,6 +485,7 @@ function TransactionFormModal({
             <Button variant="secondary" type="button" onClick={addItem}><Plus size={15} />Tambah barang</Button>
           </div>
 
+          <datalist id="transaction-product-categories">{productCategories.map((category) => <option key={category} value={category} />)}</datalist>
           <div className="transaction-form__items">
             {form.items.map((item, index) => {
               const isNewProduct = item.productId === "__new__"
@@ -451,16 +499,38 @@ function TransactionFormModal({
                   </div>
                   <label className="transaction-form__field">
                     <span>SKU / produk <b>*</b></span>
-                    <select value={item.productId} onChange={(event) => handleProductChange(item.id, event.target.value)} required>
-                      <option value="">Pilih produk</option>
-                      {availableProducts.map((product) => <option key={product.id} value={product.id}>{product.sku} · {product.name}</option>)}
-                      <option value="__new__">+ Buat produk / SKU baru</option>
-                    </select>
+                    <div className="product-picker">
+                      <input
+                        type="search"
+                        value={item.productSearch || ""}
+                        onFocus={() => updateItem(item.id, "productPickerOpen", true)}
+                        onChange={(event) => setForm((current) => ({ ...current, items: current.items.map((entry) => entry.id === item.id ? { ...entry, productSearch: event.target.value, productId: "", productPickerOpen: true, unitPrice: "" } : entry) }))}
+                        placeholder="Cari nama produk atau SKU..."
+                        aria-label={"Cari produk untuk barang " + (index + 1)}
+                        aria-expanded={Boolean(item.productPickerOpen)}
+                        aria-controls={"product-options-" + item.id}
+                        required={!item.productId}
+                      />
+                      {item.productPickerOpen && (
+                        <div className="product-picker__menu" id={"product-options-" + item.id} role="listbox">
+                          {unitProductOptions
+                            .filter((product) => !item.productSearch || (String(product.sku || "") + " " + String(product.name || "")).toLocaleLowerCase("id-ID").includes(item.productSearch.toLocaleLowerCase("id-ID")))
+                            .map((product) => (
+                              <button className="product-picker__option" key={product.id} type="button" role="option" aria-selected={item.productId === product.id} onClick={() => (availableProducts.some((localProduct) => localProduct.id === product.id) ? handleProductChange(item.id, product.id) : handleMasterProductChange(item.id, product.id))}>
+                                <strong>{product.sku}</strong><span>{product.name}</span>{availableProducts.some((localProduct) => localProduct.id === product.id) ? null : <small>Master · belum dibeli di unit ini</small>}
+                              </button>
+                            ))}
+                          {!unitProductOptions.some((product) => !item.productSearch || (String(product.sku || "") + " " + String(product.name || "")).toLocaleLowerCase("id-ID").includes(item.productSearch.toLocaleLowerCase("id-ID"))) && <p className="product-picker__empty">Tidak ada produk yang cocok.</p>}
+                          <button className="product-picker__create" type="button" onClick={() => { updateItem(item.id, "productId", "__new__"); updateItem(item.id, "productPickerOpen", false); updateItem(item.id, "productSearch", "") }}>+ Buat produk / SKU baru</button>
+                        </div>
+                      )}
+                    </div>
                   </label>
                   {isNewProduct && (
                     <div className="transaction-form__grid transaction-form__grid--new">
                       <label className="transaction-form__field"><span>Nama produk <b>*</b></span><input value={item.newProductName} onChange={(event) => updateItem(item.id, "newProductName", event.target.value)} required /></label>
                       <label className="transaction-form__field"><span>SKU baru <b>*</b></span><input value={item.newSku} onChange={(event) => updateItem(item.id, "newSku", event.target.value)} required /></label>
+                      <label className="transaction-form__field"><span>Kategori</span><input list="transaction-product-categories" value={item.newCategory} onChange={(event) => updateItem(item.id, "newCategory", event.target.value)} placeholder="Pilih atau ketik kategori" /></label>
                       <label className="transaction-form__field"><span>Harga modal patokan</span><input type="number" min="0" value={item.newCostPrice} onChange={(event) => updateItem(item.id, "newCostPrice", event.target.value)} /></label>
                       <label className="transaction-form__field"><span>Harga jual patokan</span><input type="number" min="0" value={item.newSalePrice} onChange={(event) => updateItem(item.id, "newSalePrice", event.target.value)} /></label>
                     </div>

@@ -20,6 +20,9 @@ const defaultBusinessUnits = [{ id: "furniture", name: "Furniture" }, { id: "ele
 
 function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettleTransaction, onDeleteTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [sortMode, setSortMode] = useState("date-desc")
+  const [monthFilter, setMonthFilter] = useState("all")
+  const [yearFilter, setYearFilter] = useState("all")
   const [actionError, setActionError] = useState("")
   useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const sales = Array.isArray(data) ? data : []
@@ -38,24 +41,28 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
     } catch (error) { setActionError(error?.message || "Transaksi penjualan gagal dihapus.") }
   }
 
+  const availableYears = [...new Set(sales.map((record) => String(record.date || "").slice(0, 4)).filter((value) => /^\d{4}$/.test(value)))].sort((a, b) => b.localeCompare(a))
+  const availableMonths = [...new Set(sales.map((record) => String(record.date || "").slice(0, 7)).filter((value) => /^\d{4}-\d{2}$/.test(value)))].sort((a, b) => b.localeCompare(a))
   const filteredSales = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
-    if (!query) return sales
-
-    return sales.filter((sale) =>
-      [
-        sale.number,
-        sale.customer,
-        sale.businessUnit,
-        sale.paymentMethod,
-        sale.status,
-        sale.leasingProvider,
-        sale.date,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(query)),
-    )
-  }, [sales, searchTerm])
+    const query = searchTerm.trim().toLocaleLowerCase("id-ID")
+    return sales.filter((record) => {
+      const matchesSearch = !query || [record.customer, record.number, record.invoiceNumber, record.businessUnit, record.status, record.paymentMethod, record.date]
+        .filter(Boolean).some((value) => String(value).toLocaleLowerCase("id-ID").includes(query))
+      const date = String(record.date || "")
+      return matchesSearch && (monthFilter === "all" || date.slice(0, 7) === monthFilter) && (yearFilter === "all" || date.slice(0, 4) === yearFilter)
+    }).sort((a, b) => {
+      const aDate = String(a.date || "")
+      const bDate = String(b.date || "")
+      const aName = String(a.customer || a.number || "")
+      const bName = String(b.customer || b.number || "")
+      if (sortMode === "name-asc") return aName.localeCompare(bName, "id", { sensitivity: "base" })
+      if (sortMode === "name-desc") return bName.localeCompare(aName, "id", { sensitivity: "base" })
+      if (sortMode === "date-asc") return aDate.localeCompare(bDate)
+      if (sortMode === "month-desc") return bDate.slice(0, 7).localeCompare(aDate.slice(0, 7)) || bDate.localeCompare(aDate)
+      if (sortMode === "year-desc") return bDate.slice(0, 4).localeCompare(aDate.slice(0, 4)) || bDate.localeCompare(aDate)
+      return bDate.localeCompare(aDate)
+    })
+  }, [sales, searchTerm, sortMode, monthFilter, yearFilter])
 
   return (
     <section className="sales-page">
@@ -89,6 +96,11 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
             placeholder="Cari nomor, pelanggan, atau status..."
             ariaLabel="Cari transaksi penjualan"
           />
+          <div className="history-sort-controls">
+            <label><span className="sr-only">Urutkan riwayat</span><select value={sortMode} onChange={(event) => setSortMode(event.target.value)}><option value="date-desc">Tanggal terbaru</option><option value="date-asc">Tanggal terlama</option><option value="name-asc">Nama A–Z</option><option value="name-desc">Nama Z–A</option><option value="month-desc">Bulan terbaru</option><option value="year-desc">Tahun terbaru</option></select></label>
+            <label><span className="sr-only">Filter bulan</span><select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}><option value="all">Semua bulan</option>{availableMonths.map((month) => <option key={month} value={month}>{new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date(month + "-01T00:00:00"))}</option>)}</select></label>
+            <label><span className="sr-only">Filter tahun</span><select value={yearFilter} onChange={(event) => setYearFilter(event.target.value)}><option value="all">Semua tahun</option>{availableYears.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
+          </div>
         </div>
 
         {actionError && <p className="transaction-action-error" role="alert">{actionError}</p>}

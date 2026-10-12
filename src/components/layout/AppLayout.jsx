@@ -182,13 +182,13 @@ function AppLayout({ onLogout }) {
   }
 
   function saveProduct(product) {
-    const duplicate = store.products.some((item) => item.sku?.toLowerCase() === product.sku?.toLowerCase() && item.id !== product.id)
+    const duplicate = store.products.some((item) => item.sku?.toLowerCase() === product.sku?.toLowerCase() && (item.businessUnitId ?? item.businessUnit) === product.businessUnit && item.id !== product.id)
     if (duplicate) throw new Error("SKU sudah digunakan. Gunakan SKU yang berbeda.")
     setStore((current) => {
       if (product.id && current.products.some((item) => item.id === product.id)) {
         return { ...current, products: current.products.map((item) => item.id === product.id ? { ...item, ...product } : item) }
       }
-      return { ...current, products: [...current.products, { ...product, id: createId(), stock: product.stock ?? 0 }] }
+      return { ...current, products: [...current.products, { ...product, id: createId(), stock: product.stock ?? 0, createdAt: product.createdAt || new Date().toISOString() }] }
     })
   }
 
@@ -199,19 +199,25 @@ function AppLayout({ onLogout }) {
     )
     if (duplicate) throw new Error("Nomor invoice tersebut sudah digunakan pada transaksi sejenis.")
 
-    const unitMismatch = payload.items.find((item) => {
-      const productUnit = item.product.businessUnitId ?? item.product.businessUnit
-      return productUnit && productUnit !== payload.businessUnit
+    // Resolve master-catalog selections to the unit's existing inventory row by SKU.
+    const unitKey = (value) => String(value || "").trim().toLocaleLowerCase("id-ID")
+    const transactionItems = payload.items.map((item) => {
+      if (item.product.id) return item
+      const localProduct = store.products.find((product) =>
+        unitKey(product.businessUnitId ?? product.businessUnit) === unitKey(payload.businessUnit) &&
+        unitKey(product.sku) === unitKey(item.product.sku),
+      )
+      return localProduct ? { ...item, product: localProduct } : item
     })
-    if (unitMismatch) throw new Error("Produk harus berasal dari unit usaha yang sama dengan transaksi.")
-    const newSkus = payload.items.filter((item) => !item.product.id).map((item) => item.product.sku.toLowerCase())
-    if (newSkus.some((sku) => store.products.some((product) => product.sku?.toLowerCase() === sku))) {
+    // Produk yang sama tetap boleh dipakai di unit lain, tetapi tidak boleh didaftarkan dua kali dalam unit ini.
+    const newSkus = transactionItems.filter((item) => !item.product.id).map((item) => item.product.sku.toLowerCase())
+    if (newSkus.some((sku) => store.products.some((product) => product.sku?.toLowerCase() === sku && (product.businessUnitId ?? product.businessUnit) === payload.businessUnit))) {
       throw new Error("Salah satu SKU produk baru sudah terdaftar. Pilih produk yang tersedia.")
     }
     const partyCollection = payload.type === "sale" ? "customers" : "suppliers"
     const party = payload.party.id ? payload.party : { ...payload.party, id: createId() }
-    const lineItems = payload.items.map((item) => {
-      const product = item.product.id ? item.product : { ...item.product, id: createId(), stock: 0, businessUnit: payload.businessUnit }
+    const lineItems = transactionItems.map((item) => {
+      const product = item.product.id ? item.product : { ...item.product, id: createId(), stock: 0, businessUnit: payload.businessUnit, createdAt: new Date().toISOString() }
       const previousLine = existingTransaction?.items?.find((line) => line.productId === product.id || line.sku === product.sku)
       return {
         productId: product.id,
@@ -398,6 +404,13 @@ function AppLayout({ onLogout }) {
     }
   }, [selectedSales, selectedPurchases, selectedCash, store.products, settings.stockLowThreshold])
 
+  const inventoryProducts = useMemo(() => store.products.map((product) => {
+    if (product.createdAt) return product
+    const references = [...store.purchases, ...store.sales].filter((record) =>
+      (record.items || []).some((line) => line.productId === product.id || (line.sku && line.sku === product.sku)),
+    ).map((record) => record.date).filter(Boolean).sort()
+    return references.length ? { ...product, createdAt: references[0] } : product
+  }), [store.products, store.purchases, store.sales])
   const cashPageData = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
     const accountTypes = ["cash", "bank"]
@@ -450,7 +463,7 @@ function AppLayout({ onLogout }) {
   function renderPage() {
     if (activeItem === "sales") return <SalesPage businessUnits={settings.businessUnits} data={selectedSales} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "sale", record })} onSettleTransaction={setSettlementSale} onDeleteTransaction={(id) => deleteTransaction("sale", id)} />
     if (activeItem === "purchases") return <PurchasesPage businessUnits={settings.businessUnits} data={selectedPurchases} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "purchase", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "purchase", record })} onDeleteTransaction={(id) => deleteTransaction("purchase", id)} />
-    if (activeItem === "inventory") return <InventoryPage data={store.products} globalSearchValue={searchValue} businessUnits={settings.businessUnits} stockLowThreshold={settings.stockLowThreshold} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} />
+    if (activeItem === "inventory") return <InventoryPage data={inventoryProducts} globalSearchValue={searchValue} businessUnits={settings.businessUnits} stockLowThreshold={settings.stockLowThreshold} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} />
     if (activeItem === "customers") return <CustomersPage data={store.customers} globalSearchValue={searchValue} onCreateCustomer={saveCustomer} onUpdateCustomer={updateCustomer} onDeleteCustomer={deleteCustomer} />
     if (activeItem === "suppliers") return <SuppliersPage data={store.suppliers} globalSearchValue={searchValue} onCreateSupplier={saveSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />
     if (activeItem === "cash") return <CashFlowPage data={cashPageData} globalSearchValue={searchValue} businessUnits={settings.businessUnits} onCreateCashEntry={() => { setCashEntryDraft(null); setIsCashModalOpen(true) }} onEditCashEntry={(entry) => { setCashEntryDraft(entry); setIsCashModalOpen(true) }} onDeleteCashEntry={deleteCashEntry} />
@@ -470,7 +483,7 @@ function AppLayout({ onLogout }) {
         <TopBar onMenuToggle={() => setIsMobileNavOpen((open) => !open)} onLogout={onLogout} title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} searchResults={globalSearchResults} onSearchResultSelect={handleSearchResultSelect} onNavigate={setActiveItem} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
         <main className="app-layout__content">{renderPage()}</main>
       </div>
-      {transactionDraft && <TransactionFormModal key={transactionDraft.record?.id || transactionDraft.type} initialType={transactionDraft.type} initialTransaction={transactionDraft.record} isOpen onClose={() => setTransactionDraft(null)} onSave={(payload) => saveTransaction(payload, transactionDraft.record)} businessUnits={settings.businessUnits} products={store.products} customers={store.customers} suppliers={store.suppliers} />}
+      {transactionDraft && <TransactionFormModal key={transactionDraft.record?.id || transactionDraft.type} initialType={transactionDraft.type} initialTransaction={transactionDraft.record} isOpen onClose={() => setTransactionDraft(null)} onSave={(payload) => saveTransaction(payload, transactionDraft.record)} businessUnits={settings.businessUnits} products={store.products} purchases={store.purchases} customers={store.customers} suppliers={store.suppliers} />}
       <CashEntryModal businessUnits={settings.businessUnits} isOpen={isCashModalOpen} initialEntry={cashEntryDraft} onClose={() => { setIsCashModalOpen(false); setCashEntryDraft(null) }} onSave={saveCashEntry} />
       {settlementSale && <SettlementModal sale={settlementSale} onClose={() => setSettlementSale(null)} onSave={saveSettlement} />}
     </div>
