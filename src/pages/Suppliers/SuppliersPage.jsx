@@ -121,8 +121,8 @@ function SuppliersPage({ data = [], onCreateSupplier, onUpdateSupplier, onDelete
           <div className="suppliers-table-wrap"><table className="suppliers-table">
             <thead><tr><th>Nama supplier</th><th>Telepon</th><th>Alamat</th><th className="suppliers-table__actions-heading">Aksi</th></tr></thead>
             <tbody>{filteredSuppliers.map((supplier) => <tr key={supplier.id}>
-              <td><strong>{supplier.name || "—"}</strong></td><td>{supplier.phone || "—"}</td><td className="suppliers-table__address">{supplier.address || "—"}</td>
-              <td><div className="suppliers-table__actions">
+              <td data-label="Nama supplier"><strong>{supplier.name || "—"}</strong></td><td data-label="Telepon">{supplier.phone || "—"}</td><td className="suppliers-table__address" data-label="Alamat">{supplier.address || "—"}</td>
+              <td data-label="Aksi"><div className="suppliers-table__actions">
                 <button className="suppliers-icon-button" type="button" aria-label={`Edit ${supplier.name}`} title="Edit supplier" onClick={() => openEditModal(supplier)}><Pencil size={15} /></button>
                 <button className="suppliers-icon-button suppliers-icon-button--danger" type="button" aria-label={`Hapus ${supplier.name}`} title="Hapus supplier" onClick={() => handleDelete(supplier)}><Trash2 size={15} /></button>
               </div></td>

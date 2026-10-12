@@ -200,15 +200,15 @@ function CustomerPage({
               <tbody>
                 {filteredCustomers.map((customer) => (
                   <tr key={customer.id}>
-                    <td>
+                    <td data-label="Nama">
                       <strong>{customer.name}</strong>
                     </td>
-                    <td>{customer.phone || "—"}</td>
-                    <td>{customer.email || "—"}</td>
-                    <td className="customer-table__address">
+                    <td data-label="Telepon">{customer.phone || "—"}</td>
+                    <td data-label="Email">{customer.email || "—"}</td>
+                    <td className="customer-table__address" data-label="Alamat">
                       {customer.address || "—"}
                     </td>
-                    <td>
+                    <td data-label="Aksi">
                       <div className="customer-table__actions">
                         <button
                           className="customer-icon-button"

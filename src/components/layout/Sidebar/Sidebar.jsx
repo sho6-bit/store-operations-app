@@ -92,6 +92,7 @@ function Sidebar({
   selectedBusinessUnit = "all",
   onBusinessUnitChange,
   onCollapsedChange,
+  isMobileOpen = false,
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [showBusinessUnits, setShowBusinessUnits] = useState(false)
@@ -110,7 +111,7 @@ function Sidebar({
   }
 
   return (
-    <aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
+    <aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""} ${isMobileOpen ? "sidebar--mobile-open" : ""}`} >
       <div className="sidebar__header">
         <div className="sidebar__brand">
           <div className="sidebar__logo">

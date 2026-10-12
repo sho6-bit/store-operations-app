@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 
-import { Pencil, Plus } from "lucide-react"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
@@ -18,8 +18,9 @@ function formatCurrency(value) {
 
 const defaultBusinessUnits = [{ id: "furniture", name: "Furniture" }, { id: "electronic-1", name: "Electronic 1" }, { id: "electronic-2", name: "Electronic 2" }]
 
-function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
+function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction, onDeleteTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [actionError, setActionError] = useState("")
   useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const purchases = Array.isArray(data) ? data : []
   const totalPurchases = purchases.reduce((sum, purchase) => sum + (Number(purchase.total) || 0), 0)
@@ -27,6 +28,15 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction, busi
     ["menunggu", "pending", "belum lunas", "belum dibayar", "hutang"].includes(String(purchase.status || "").trim().toLowerCase()),
   )
   const pendingTotal = pendingPurchases.reduce((sum, purchase) => sum + (Number(purchase.remainingAmount ?? purchase.total) || 0), 0)
+
+  async function handleDelete(purchase) {
+    setActionError("")
+    if (!window.confirm("Hapus transaksi pembelian " + (purchase.number || "") + "? Stok dan mutasi kas yang terkait akan disesuaikan.")) return
+    try {
+      if (typeof onDeleteTransaction !== "function") throw new Error("Aksi hapus belum tersambung.")
+      await onDeleteTransaction(purchase.id)
+    } catch (error) { setActionError(error?.message || "Transaksi pembelian gagal dihapus.") }
+  }
 
   const filteredPurchases = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -73,6 +83,8 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction, busi
           />
         </div>
 
+        {actionError && <p className="transaction-action-error" role="alert">{actionError}</p>}
+
         {filteredPurchases.length > 0 ? (
           <div className="purchases-table-wrap">
             <table className="purchases-table">
@@ -93,15 +105,15 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction, busi
               <tbody>
                 {filteredPurchases.map((purchase) => (
                   <tr key={purchase.id}>
-                    <td>
+                    <td data-label="Nomor">
                       <strong>{purchase.number || "—"}</strong>
                     </td>
-                    <td>{purchase.date || "—"}</td>
-                    <td>{purchase.supplier || "—"}</td>
-                    <td>{businessUnits.find((unit) => unit.id === purchase.businessUnit)?.name || purchase.businessUnit || "—"}</td>
-                    <td>{purchase.paymentMethod || "—"}</td>
-                    <td>{purchase.dueDate || "—"}</td>
-                    <td>
+                    <td data-label="Tanggal">{purchase.date || "—"}</td>
+                    <td data-label="Supplier">{purchase.supplier || "—"}</td>
+                    <td data-label="Unit usaha">{businessUnits.find((unit) => unit.id === purchase.businessUnit)?.name || purchase.businessUnit || "—"}</td>
+                    <td data-label="Metode pembayaran">{purchase.paymentMethod || "—"}</td>
+                    <td data-label="Jatuh tempo">{purchase.dueDate || "—"}</td>
+                    <td data-label="Status">
                       {purchase.status ? (
                         <span
                           className={`purchases-status purchases-status--${String(
@@ -116,13 +128,14 @@ function PurchasesPage({ data = [], onCreateTransaction, onEditTransaction, busi
                         "—"
                       )}
                     </td>
-                    <td className="purchases-table__amount">
+                    <td className="purchases-table__amount" data-label="Total">
                       {formatCurrency(purchase.total)}
                     </td>
-                    <td className="purchases-table__action">
+                    <td className="purchases-table__action" data-label="Aksi">
                       <button className="purchases-edit-button" type="button" onClick={() => onEditTransaction?.(purchase)} aria-label={"Edit transaksi " + (purchase.number || "") } title="Edit transaksi">
                         <Pencil size={16} />
                       </button>
+                      <button className="transaction-delete-button" type="button" onClick={() => handleDelete(purchase)} aria-label={"Hapus transaksi " + (purchase.number || "")} title="Hapus transaksi"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 ))}

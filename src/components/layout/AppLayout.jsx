@@ -31,6 +31,7 @@ function sum(values) {
 function AppLayout({ onLogout }) {
   const [activeItem, setActiveItem] = useState("dashboard")
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState("all")
   const [searchValue, setSearchValue] = useState("")
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -41,6 +42,7 @@ function AppLayout({ onLogout }) {
   const [cloudSyncError, setCloudSyncError] = useState("")
   const [transactionDraft, setTransactionDraft] = useState(null)
   const [isCashModalOpen, setIsCashModalOpen] = useState(false)
+  const [cashEntryDraft, setCashEntryDraft] = useState(null)
   const [settlementSale, setSettlementSale] = useState(null)
 
   useEffect(() => { writeStoreData(store) }, [store])
@@ -128,6 +130,55 @@ function AppLayout({ onLogout }) {
   }
   function deleteSupplier(id) {
     setStore((current) => ({ ...current, suppliers: current.suppliers.filter((item) => item.id !== id) }))
+  }
+
+  function deleteProduct(id) {
+    setStore((current) => ({ ...current, products: current.products.filter((item) => item.id !== id) }))
+  }
+
+  function deleteTransaction(type, id) {
+    const collection = type === "sale" ? "sales" : "purchases"
+    const record = store[collection].find((item) => item.id === id)
+    if (!record) throw new Error("Transaksi tidak ditemukan.")
+    const lines = Array.isArray(record.items) && record.items.length
+      ? record.items
+      : record.productId ? [{ productId: record.productId, sku: record.sku, quantity: record.quantity }] : []
+    const stockChanges = new Map()
+    lines.forEach((line) => {
+      const product = store.products.find((item) => item.id === line.productId) || store.products.find((item) => item.sku === line.sku)
+      if (!product) return
+      const quantity = Number(line.quantity) || 0
+      const change = type === "sale" ? quantity : -quantity
+      stockChanges.set(product.id, (stockChanges.get(product.id) || 0) + change)
+    })
+    if (type === "purchase") {
+      for (const [productId, change] of stockChanges) {
+        const product = store.products.find((item) => item.id === productId)
+        const quantityToRemove = Math.abs(change)
+        if (Number(product?.stock || 0) < quantityToRemove) {
+          throw new Error("Stok " + (product?.name || "produk") + " tersisa " + (product?.stock || 0) + ", sedangkan pembelian ini menambah " + quantityToRemove + ". Barang kemungkinan sudah terjual. Koreksi transaksi terkait terlebih dahulu agar stok tidak menjadi negatif.")
+        }
+      }
+    }
+    const settlementIds = new Set((record.settlements || []).map((payment) => payment.id).filter(Boolean))
+    const category = type === "sale" ? "Penjualan" : "Pembelian"
+    const initialAmount = record.paymentMethod === "Hutang Usaha" ? 0 : record.paymentMethod === "DP" ? Number(record.downPayment || 0) : Number(record.total || 0)
+    const invoice = record.number || record.invoiceNumber
+    setStore((current) => ({
+      ...current,
+      [collection]: current[collection].filter((item) => item.id !== id),
+      products: current.products.map((product) => {
+        const change = stockChanges.get(product.id)
+        return change == null ? product : { ...product, stock: Number(product.stock || 0) + change }
+      }),
+      cashTransactions: current.cashTransactions.filter((entry) => {
+        if (entry.sourceTransactionId === id || (type === "sale" && entry.transactionId === id)) return false
+        if (entry.sourceSettlementId && settlementIds.has(entry.sourceSettlementId)) return false
+        if (type === "sale" && entry.transactionId === id && entry.category === "Pelunasan Penjualan") return false
+        const isLegacyLinkedMovement = !entry.sourceTransactionId && !entry.sourceSettlementId && entry.category === category && entry.reference === invoice && entry.businessUnit === record.businessUnit && entry.date === record.date && Number(entry.amount) === initialAmount
+        return !isLegacyLinkedMovement
+      }),
+    }))
   }
 
   function saveProduct(product) {
@@ -249,7 +300,7 @@ function AppLayout({ onLogout }) {
         const updatedLine = lineItems.find((line) => line.productId === product.id)
         return {
           ...product,
-          ...(stockChange == null ? {} : { stock: Math.max(0, (Number(product.stock) || 0) + stockChange) }),
+          ...(stockChange == null ? {} : { stock: (Number(product.stock) || 0) + stockChange }),
           ...(product.businessUnit ? {} : { businessUnit: payload.businessUnit }),
           ...(payload.type === "purchase" && updatedLine ? { costPrice: updatedLine.unitPrice } : {}),
         }
@@ -304,9 +355,17 @@ function AppLayout({ onLogout }) {
     }))
   }
 
-  function saveCashEntry(entry) {
+  function saveCashEntry(entry, existingId = null) {
     const account = settings.accounts[entry.businessUnit]?.[entry.accountType] || entry.account
+    if (existingId) {
+      setStore((current) => ({ ...current, cashTransactions: current.cashTransactions.map((item) => item.id === existingId ? { ...item, ...entry, account, id: existingId } : item) }))
+      return
+    }
     setStore((current) => ({ ...current, cashTransactions: [...current.cashTransactions, { ...entry, account, id: createId() }] }))
+  }
+
+  function deleteCashEntry(id) {
+    setStore((current) => ({ ...current, cashTransactions: current.cashTransactions.filter((item) => item.id !== id) }))
   }
 
   const selectedSales = useMemo(() => store.sales.filter((item) => selectedBusinessUnit === "all" || item.businessUnit === selectedBusinessUnit), [store.sales, selectedBusinessUnit])
@@ -334,7 +393,7 @@ function AppLayout({ onLogout }) {
       salesOverview: Array.from(byDate, ([label, value]) => ({ id: label, label, value })),
       salesByUnit: Array.from(byUnit, ([label, value]) => ({ id: label, label, value })),
       cashFlow: selectedCash.map((item) => ({ ...item, label: item.description, value: item.amount })),
-      lowStock: store.products.filter((item) => Number(item.stock) > 0 && Number(item.stock) <= Number(item.reorderLevel ?? item.minStock ?? settings.stockLowThreshold)),
+      lowStock: store.products.filter((item) => Number(item.stock) < 0 || (Number(item.stock) > 0 && Number(item.stock) <= Number(item.reorderLevel ?? item.minStock ?? settings.stockLowThreshold))),
       recentTransactions: recent,
     }
   }, [selectedSales, selectedPurchases, selectedCash, store.products, settings.stockLowThreshold])
@@ -389,12 +448,12 @@ function AppLayout({ onLogout }) {
   }
 
   function renderPage() {
-    if (activeItem === "sales") return <SalesPage businessUnits={settings.businessUnits} data={selectedSales} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "sale", record })} onSettleTransaction={setSettlementSale} />
-    if (activeItem === "purchases") return <PurchasesPage businessUnits={settings.businessUnits} data={selectedPurchases} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "purchase", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "purchase", record })} />
-    if (activeItem === "inventory") return <InventoryPage data={store.products} globalSearchValue={searchValue} businessUnits={settings.businessUnits} stockLowThreshold={settings.stockLowThreshold} onSaveProduct={saveProduct} />
+    if (activeItem === "sales") return <SalesPage businessUnits={settings.businessUnits} data={selectedSales} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "sale", record })} onSettleTransaction={setSettlementSale} onDeleteTransaction={(id) => deleteTransaction("sale", id)} />
+    if (activeItem === "purchases") return <PurchasesPage businessUnits={settings.businessUnits} data={selectedPurchases} globalSearchValue={searchValue} onCreateTransaction={() => setTransactionDraft({ type: "purchase", record: null })} onEditTransaction={(record) => setTransactionDraft({ type: "purchase", record })} onDeleteTransaction={(id) => deleteTransaction("purchase", id)} />
+    if (activeItem === "inventory") return <InventoryPage data={store.products} globalSearchValue={searchValue} businessUnits={settings.businessUnits} stockLowThreshold={settings.stockLowThreshold} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} />
     if (activeItem === "customers") return <CustomersPage data={store.customers} globalSearchValue={searchValue} onCreateCustomer={saveCustomer} onUpdateCustomer={updateCustomer} onDeleteCustomer={deleteCustomer} />
     if (activeItem === "suppliers") return <SuppliersPage data={store.suppliers} globalSearchValue={searchValue} onCreateSupplier={saveSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />
-    if (activeItem === "cash") return <CashFlowPage data={cashPageData} globalSearchValue={searchValue} businessUnits={settings.businessUnits} onCreateCashEntry={() => setIsCashModalOpen(true)} />
+    if (activeItem === "cash") return <CashFlowPage data={cashPageData} globalSearchValue={searchValue} businessUnits={settings.businessUnits} onCreateCashEntry={() => { setCashEntryDraft(null); setIsCashModalOpen(true) }} onEditCashEntry={(entry) => { setCashEntryDraft(entry); setIsCashModalOpen(true) }} onDeleteCashEntry={deleteCashEntry} />
     if (activeItem === "reports") return <ReportsPage businessUnits={settings.businessUnits} data={reportData} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} />
     if (activeItem === "settings") return <SettingPage settings={settings} storeData={store} onSaveSettings={saveSettings} onRestoreData={restoreBackup} onLogout={onLogout} />
     return <DashboardPage businessUnits={settings.businessUnits} data={dashboardData} selectedBusinessUnit={selectedBusinessUnit} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} />
@@ -405,13 +464,14 @@ function AppLayout({ onLogout }) {
   return (
     <div className={"app-layout " + (isDarkMode ? "app-layout--dark " : "") + (isSidebarCollapsed ? "app-layout--collapsed" : "")} data-theme={isDarkMode ? "dark" : "light"}>
       {cloudSyncError && <div className="app-cloud-sync-error" role="alert">Sinkronisasi Supabase belum berhasil: {cloudSyncError}</div>}
-      <Sidebar storeProfile={settings.storeProfile} businessUnits={settings.businessUnits} activeItem={activeItem} onNavigate={setActiveItem} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} onCollapsedChange={setIsSidebarCollapsed} />
+      {isMobileNavOpen && <button className="sidebar-backdrop" type="button" aria-label="Tutup menu navigasi" onClick={() => setIsMobileNavOpen(false)} />}
+      <Sidebar storeProfile={settings.storeProfile} businessUnits={settings.businessUnits} activeItem={activeItem} onNavigate={(item) => { setActiveItem(item); setIsMobileNavOpen(false) }} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} onCollapsedChange={setIsSidebarCollapsed} isMobileOpen={isMobileNavOpen} />
       <div className="app-layout__main">
-        <TopBar onLogout={onLogout} title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} searchResults={globalSearchResults} onSearchResultSelect={handleSearchResultSelect} onNavigate={setActiveItem} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
+        <TopBar onMenuToggle={() => setIsMobileNavOpen((open) => !open)} onLogout={onLogout} title={pageTitles[activeItem] || "Dashboard"} searchValue={searchValue} onSearchChange={setSearchValue} searchResults={globalSearchResults} onSearchResultSelect={handleSearchResultSelect} onNavigate={setActiveItem} isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode((current) => !current)} userName="Admin" userRole="Administrator" userInitials="TN" />
         <main className="app-layout__content">{renderPage()}</main>
       </div>
       {transactionDraft && <TransactionFormModal key={transactionDraft.record?.id || transactionDraft.type} initialType={transactionDraft.type} initialTransaction={transactionDraft.record} isOpen onClose={() => setTransactionDraft(null)} onSave={(payload) => saveTransaction(payload, transactionDraft.record)} businessUnits={settings.businessUnits} products={store.products} customers={store.customers} suppliers={store.suppliers} />}
-      <CashEntryModal businessUnits={settings.businessUnits} isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} onSave={saveCashEntry} />
+      <CashEntryModal businessUnits={settings.businessUnits} isOpen={isCashModalOpen} initialEntry={cashEntryDraft} onClose={() => { setIsCashModalOpen(false); setCashEntryDraft(null) }} onSave={saveCashEntry} />
       {settlementSale && <SettlementModal sale={settlementSale} onClose={() => setSettlementSale(null)} onSave={saveSettlement} />}
     </div>
   )

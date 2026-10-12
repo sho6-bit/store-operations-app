@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Search, Sun, Moon, ChevronDown, X, Settings, LogOut } from "lucide-react"
+import { Search, Sun, Moon, ChevronDown, X, Settings, LogOut, Menu } from "lucide-react"
 import "./topBar.css"
 
 function TopBar({
@@ -14,6 +14,7 @@ function TopBar({
   onProfileClick,
   onNavigate,
   onLogout,
+  onMenuToggle,
   isDarkMode = false,
   onThemeToggle,
 }) {
@@ -53,6 +54,7 @@ function TopBar({
   return (
     <header className="topbar">
       <div className="topbar__left">
+        <button type="button" className="topbar__menu-button" onClick={onMenuToggle} aria-label="Buka navigasi"><Menu size={20} /></button>
         <div className="topbar__page-info">
           <h1 className="topbar__title">{title}</h1>
           {subtitle && <p className="topbar__subtitle">{subtitle}</p>}

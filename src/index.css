@@ -229,3 +229,37 @@ body { font-size: 14px; }
 @media (max-width: 640px) {
   .app-layout__content { padding: 16px 12px; }
 }
+
+
+/* Phone layout: keep wide data tables readable instead of crushing columns. */
+@media (max-width: 640px) {
+  .app-layout :is(table[class$="-table"]) { table-layout: auto !important; }
+  .app-layout :is(.sales-table, .purchases-table) thead { display: none !important; }
+  .app-layout :is(.sales-table, .purchases-table),
+  .app-layout :is(.sales-table, .purchases-table) tbody,
+  .app-layout :is(.sales-table, .purchases-table) tr { display: block !important; width: 100% !important; }
+  .app-layout :is(.sales-table, .purchases-table) tr { padding: 8px 12px !important; border-top: 1px solid var(--color-border-light); }
+  .app-layout :is(.sales-table, .purchases-table) td { display: grid !important; grid-template-columns: minmax(105px, 42%) minmax(0, 1fr); gap: 10px; width: 100% !important; padding: 7px 0 !important; border: 0 !important; text-align: left !important; white-space: normal !important; overflow-wrap: break-word !important; word-break: normal !important; font-size: 13px !important; }
+  .app-layout :is(.sales-table, .purchases-table) td::before { content: attr(data-label); color: var(--color-text-tertiary); font-size: 11px; font-weight: 600; line-height: 1.4; }
+  .app-layout :is(.sales-table, .purchases-table) td[data-label="Aksi"] { display: flex !important; justify-content: flex-end; }
+  .app-layout :is(.sales-table, .purchases-table) td[data-label="Aksi"]::before { margin-right: auto; }
+  .app-layout :is(.sales-table, .purchases-table) .sales-status,
+  .app-layout :is(.sales-table, .purchases-table) .purchases-status { justify-self: start; }
+}
+
+
+@media (max-width: 640px) {
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) thead { display:none !important; }
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table),
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) tbody,
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) tr { display:block !important; width:100% !important; }
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) tr { padding:8px 12px !important; border-top:1px solid var(--color-border-light); }
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) td { display:grid !important; grid-template-columns:minmax(95px,40%) minmax(0,1fr); gap:9px; width:100% !important; padding:7px 0 !important; border:0 !important; text-align:left !important; white-space:normal !important; overflow-wrap:anywhere !important; word-break:normal !important; font-size:13px !important; }
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) td::before { content:attr(data-label); color:var(--color-text-tertiary); font-size:11px; font-weight:600; line-height:1.4; }
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) td[data-label="Aksi"] { display:flex !important; justify-content:flex-end; align-items:center; gap:8px; }
+  .app-layout :is(.inventory-table,.customer-table,.suppliers-table) td[data-label="Aksi"]::before { margin-right:auto; }
+  .app-layout .inventory-table__sku { overflow-wrap:anywhere; }
+  .app-layout .inventory-table .inventory-status { justify-self:start; }
+  .app-layout .customer-table__address,.app-layout .suppliers-table__address { min-width:0; max-width:none; }
+  .app-layout .customer-table__actions,.app-layout .suppliers-table__actions { justify-content:flex-end; }
+}

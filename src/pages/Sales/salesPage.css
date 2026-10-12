@@ -208,3 +208,7 @@
 
 .settlement-modal__invoice { margin: 0; padding: 12px; color: var(--color-text-secondary); background: var(--color-background-secondary); border-radius: 9px; font-size: 13px; line-height: 1.8; }
 .sales-edit-button--settle { color: var(--color-primary); }
+
+.transaction-delete-button { display:inline-grid; width:34px; height:34px; place-items:center; color:var(--color-danger); background:transparent; border:1px solid transparent; border-radius:8px; cursor:pointer; }
+.transaction-delete-button:hover { background:var(--color-danger-soft); border-color:var(--color-danger-border); }
+.transaction-action-error { margin:12px 18px; padding:10px 12px; color:var(--color-danger); background:var(--color-danger-soft); border-radius:8px; font-size:12px; line-height:1.5; }

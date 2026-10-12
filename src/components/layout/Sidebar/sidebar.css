@@ -834,7 +834,7 @@
    MOBILE
 ========================================================= */
 
-@media (max-width: 900px) {
+@media (min-width: 641px) and (max-width: 900px) {
 
     .sidebar {
         width: var(--sidebar-collapsed-width);
@@ -925,6 +925,31 @@
         display: none;
     }
 }
+@media (max-width: 640px) {
+  .sidebar, .sidebar.sidebar--collapsed {
+    width: min(86vw, 300px);
+    transform: translateX(-105%);
+    box-shadow: 12px 0 32px rgb(0 0 0 / 20%);
+    transition: transform 220ms ease;
+  }
+  .sidebar.sidebar--mobile-open { transform: translateX(0); }
+  .sidebar__header { height: 78px; padding: 0 16px 0 18px; justify-content: space-between; }
+  .sidebar__brand { gap: 12px; }
+  .sidebar__brand-text, .sidebar--collapsed .sidebar__brand-text { display: flex; }
+  .sidebar__brand-text h1 { font-size: 17px; }
+  .sidebar__logo, .sidebar--collapsed .sidebar__logo { width: 46px; height: 46px; font-size: 16px; }
+  .sidebar__collapse-button, .sidebar--collapsed .sidebar__collapse-button { display: none; }
+  .sidebar__business-unit { display: block; margin: 0 14px 12px; }
+  .sidebar__selection-label, .sidebar--collapsed .sidebar__selection-label { display: block; }
+  .sidebar__navigation, .sidebar--collapsed .sidebar__navigation { padding: 8px 14px 16px; overflow-y: auto; }
+  .sidebar__menu { gap: 3px; }
+  .sidebar__menu-item, .sidebar--collapsed .sidebar__menu-item { min-height: 44px; justify-content: flex-start; gap: 12px; padding: 0 12px; }
+  .sidebar__menu-label, .sidebar__menu-badge, .sidebar--collapsed .sidebar__menu-label, .sidebar--collapsed .sidebar__menu-badge { display: inline-flex; }
+  .sidebar__bottom, .sidebar--collapsed .sidebar__bottom { padding: 10px 14px 14px; }
+  .sidebar__profile, .sidebar--collapsed .sidebar__profile { justify-content: flex-start; padding: 5px 7px; }
+  .sidebar__profile-info, .sidebar__profile-icon, .sidebar--collapsed .sidebar__profile-info, .sidebar--collapsed .sidebar__profile-icon { display: flex; }
+}
+
 /* Compact desktop sidebar so the full navigation fits more comfortably */
 @media (min-width: 901px) {
   .sidebar__header { height: 88px; padding-right: 18px; padding-left: 20px; }

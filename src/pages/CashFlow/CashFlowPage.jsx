@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowDownLeft, ArrowUpRight, History, Landmark, Plus, Wallet } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, History, Landmark, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
 import SearchInput from "../../components/common/SearchInput"
@@ -20,7 +20,7 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function CashFlowPage({ data = {}, onCreateCashEntry, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
+function CashFlowPage({ data = {}, onCreateCashEntry, onEditCashEntry, onDeleteCashEntry, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
   useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const [typeFilter, setTypeFilter] = useState("all")
@@ -52,6 +52,14 @@ function CashFlowPage({ data = {}, onCreateCashEntry, businessUnits = defaultBus
     )
   }
 
+  function actionButtons(transaction) {
+    const linked = transaction.sourceTransactionId || transaction.sourceSettlementId || transaction.transactionId
+    const message = "Hapus mutasi “" + (transaction.description || transaction.category || "Kas & Bank") + "” sebesar " + formatCurrency(transaction.amount) + "?" + (linked ? String.fromCharCode(10, 10) + "Mutasi terkait transaksi lain. Yang dihapus hanya catatan mutasi; transaksi asal tetap tersimpan." : "")
+    return <div className="cash-flow-row-actions">
+      <button type="button" className="cash-flow-row-actions__button" onClick={() => onEditCashEntry?.(transaction)} aria-label="Edit mutasi" title="Edit mutasi"><Pencil size={16} /></button>
+      <button type="button" className="cash-flow-row-actions__button cash-flow-row-actions__button--delete" onClick={() => { if (window.confirm(message)) onDeleteCashEntry?.(transaction.id) }} aria-label="Hapus mutasi" title="Hapus mutasi"><Trash2 size={16} /></button>
+    </div>
+  }
   return (
     <section className="cash-flow-page">
       <header className="cash-flow-page__header">
@@ -115,7 +123,7 @@ function CashFlowPage({ data = {}, onCreateCashEntry, businessUnits = defaultBus
         {filteredTransactions.length > 0 ? (
           <div className="cash-flow-table-wrap">
             <table className="cash-flow-table">
-              <thead><tr><th>Tanggal</th><th>Deskripsi</th><th>Unit Usaha</th><th>Akun</th><th>Jenis</th><th className="cash-flow-table__amount-heading">Jumlah</th></tr></thead>
+              <thead><tr><th>Tanggal</th><th>Deskripsi</th><th>Unit Usaha</th><th>Akun</th><th>Jenis</th><th className="cash-flow-table__amount-heading">Jumlah</th><th>Aksi</th></tr></thead>
               <tbody>{filteredTransactions.map((transaction) => (
                 <tr key={transaction.id}>
                   <td>{transaction.date || "—"}</td>
@@ -124,6 +132,7 @@ function CashFlowPage({ data = {}, onCreateCashEntry, businessUnits = defaultBus
                   <td>{transaction.account || "—"}</td>
                   <td>{transaction.type === "income" ? "Kas masuk" : transaction.type === "expense" ? "Kas keluar" : "—"}</td>
                   <td className={"cash-flow-table__amount cash-flow-table__amount--" + (transaction.type || "")}>{formatCurrency(transaction.amount)}</td>
+                  <td>{actionButtons(transaction)}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -139,11 +148,11 @@ function CashFlowPage({ data = {}, onCreateCashEntry, businessUnits = defaultBus
           <p className="cash-account-history__subtitle">{selectedAccount.unitName} · {accountMovements.length} mutasi</p>
           {accountMovements.length ? (
             <div className="cash-account-history__table-wrap"><table className="cash-account-history__table">
-              <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Jenis</th><th className="is-numeric">Jumlah</th></tr></thead>
+              <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Jenis</th><th className="is-numeric">Jumlah</th><th>Aksi</th></tr></thead>
               <tbody>{accountMovements.map((movement) => <tr key={movement.id}>
                 <td>{movement.date || "—"}</td><td><strong>{movement.description || "—"}</strong>{movement.reference && <small>{movement.reference}</small>}</td>
                 <td>{movement.type === "income" ? "Kas masuk" : movement.type === "expense" ? "Kas keluar" : "—"}</td>
-                <td className={"is-numeric " + (movement.type === "income" ? "is-positive" : "is-negative")}>{formatCurrency(movement.amount)}</td>
+                <td className={"is-numeric " + (movement.type === "income" ? "is-positive" : "is-negative")}>{formatCurrency(movement.amount)}</td><td>{actionButtons(movement)}</td>
               </tr>)}</tbody>
             </table></div>
           ) : <div className="cash-flow-empty"><strong>Belum ada mutasi pada akun ini</strong><span>Mutasi akan tampil setelah transaksi kas atau bank tercatat.</span></div>}

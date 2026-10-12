@@ -53,3 +53,13 @@
 @media (max-width:700px) { .reports-page { gap:13px; } .reports-page__header { align-items:flex-start; } .reports-filters { align-items:stretch; flex-direction:column; } .reports-filter,.reports-filter--unit { min-width:0; width:100%; } .reports-card__toolbar { align-items:stretch; flex-direction:column; padding:15px; } .reports-card__toolbar .common-search { width:100%; } .reports-profit-layout { padding:11px; } .reports-percent-column { grid-template-columns:1fr; } .reports-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); padding:11px 11px 2px; } .reports-card > .reports-percent-panel { margin:10px 11px 12px; } .reports-table th,.reports-table td { padding:8px 6px; font-size:10px; } }
 @media (max-width:450px) { .reports-metrics { grid-template-columns:1fr; } .reports-page__header { flex-direction:column; } }
 @media print { body * { visibility:hidden !important; } .reports-page,.reports-page * { visibility:visible !important; } .reports-page { position:absolute; inset:0; width:100%; padding:0; color:#111827 !important; background:#fff !important; } .reports-page__header button,.reports-filters,.reports-tabs,.reports-card__toolbar .common-search,.reports-card__footer { display:none !important; } .reports-card,.reports-percent-panel,.reports-metric { box-shadow:none !important; break-inside:avoid; } .reports-table-wrap { overflow:visible; } }
+
+@media (max-width:640px) {
+ .reports-table-wrap { overflow:visible; padding:0 11px 11px; }
+ .reports-table,.reports-table tbody,.reports-table tr { display:block; width:100%; }
+ .reports-table thead { display:none; }
+ .reports-table tr { padding:8px 11px; border:1px solid var(--color-border-light); border-radius:10px; margin-top:9px; }
+ .reports-table td { display:grid; grid-template-columns:minmax(95px,40%) minmax(0,1fr); gap:8px; padding:6px 0 !important; border:0 !important; text-align:left !important; font-size:12px !important; overflow-wrap:break-word !important; word-break:normal !important; }
+ .reports-table td::before { content:attr(data-label); color:var(--color-text-tertiary); font-size:10px; font-weight:600; line-height:1.4; }
+ .reports-table td.is-numeric { text-align:left; }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Pencil, Plus } from "lucide-react"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
 
@@ -22,7 +22,7 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-function InventoryPage({ data = [], onSaveProduct, businessUnits = defaultBusinessUnits, stockLowThreshold = 1, globalSearchValue = "" }) {
+function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnits = defaultBusinessUnits, stockLowThreshold = 1, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
   useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const [categoryFilter, setCategoryFilter] = useState("all")
@@ -31,17 +31,18 @@ function InventoryPage({ data = [], onSaveProduct, businessUnits = defaultBusine
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: "", sku: "", costPrice: "", referencePrice: "", businessUnit: "" })
   const [formError, setFormError] = useState("")
+  const [actionError, setActionError] = useState("")
   const products = Array.isArray(data) ? data : []
 
   const categories = [...new Set(products.map((product) => product.category).filter(Boolean))]
   const hasCostData = products.length > 0 && products.every((product) => product.costPrice != null || product.cost != null)
   const inventoryValue = products.reduce(
-    (sum, product) => sum + (Number(product.stock) || 0) * (Number(product.costPrice ?? product.cost) || 0),
+    (sum, product) => sum + Math.max(0, Number(product.stock) || 0) * (Number(product.costPrice ?? product.cost) || 0),
     0,
   )
   const lowStockCount = products.filter((product) => {
     const threshold = product.reorderLevel ?? product.minStock ?? stockLowThreshold
-    return threshold != null && Number(product.stock) > 0 && Number(product.stock) <= Number(threshold)
+    return Number(product.stock) < 0 || (threshold != null && Number(product.stock) > 0 && Number(product.stock) <= Number(threshold))
   }).length
   const outOfStockCount = products.filter((product) => product.stock != null && Number(product.stock) === 0).length
 
@@ -78,10 +79,20 @@ function InventoryPage({ data = [], onSaveProduct, businessUnits = defaultBusine
     } catch (error) { setFormError(error?.message || "Produk gagal disimpan.") }
   }
 
+  async function handleDeleteProduct(product) {
+    setActionError("")
+    if (!window.confirm("Hapus produk " + product.name + " dari daftar stok? Riwayat transaksi terdahulu tetap tersimpan.")) return
+    try {
+      if (typeof onDeleteProduct !== "function") throw new Error("Aksi hapus belum tersambung.")
+      await onDeleteProduct(product.id)
+    } catch (error) { setActionError(error?.message || "Produk gagal dihapus.") }
+  }
+
   function getStockStatus(product) {
     const stock = Number(product.stock)
     const threshold = product.reorderLevel ?? product.minStock ?? stockLowThreshold
     if (product.stock == null || !Number.isFinite(stock)) return null
+    if (stock < 0) return { label: "Pre-order " + Math.abs(stock) + " unit", tone: "backorder" }
     if (stock === 0) return { label: "Habis", tone: "out" }
     if (threshold != null && stock <= Number(threshold)) return { label: "Menipis", tone: "low" }
     if (threshold != null) return { label: "Aman", tone: "safe" }
@@ -103,7 +114,7 @@ function InventoryPage({ data = [], onSaveProduct, businessUnits = defaultBusine
 
       <SummaryCards cards={[
         { label: "Total SKU", value: products.length, detail: "Jumlah produk pada data inventori", tone: "blue" },
-        { label: "Nilai inventori", value: hasCostData ? formatCurrency(inventoryValue) : "—", detail: "Dihitung dari stok dan HPP yang tersedia", tone: "green" },
+        { label: "Nilai inventori", value: hasCostData ? formatCurrency(inventoryValue) : "—", detail: "Stok fisik dikali HPP; pre-order tidak dihitung", tone: "green" },
         { label: "Stok menipis", value: lowStockCount, detail: "Batas stok menipis: " + stockLowThreshold + " unit", tone: "orange" },
         { label: "Stok habis", value: products.length ? outOfStockCount : "—", detail: "Produk dengan jumlah stok nol", tone: "purple" },
       ]} />
@@ -132,6 +143,8 @@ function InventoryPage({ data = [], onSaveProduct, businessUnits = defaultBusine
           </label>
         </div>
 
+        {actionError && <p className="inventory-action-error" role="alert">{actionError}</p>}
+
         {filteredProducts.length > 0 ? (
           <div className="inventory-table-wrap">
             <table className="inventory-table">
@@ -154,25 +167,25 @@ function InventoryPage({ data = [], onSaveProduct, businessUnits = defaultBusine
                   const stockStatus = getStockStatus(product)
                   return (
                     <tr key={product.id}>
-                      <td>
+                      <td data-label="Produk">
                         <strong>{product.name || "—"}</strong>
                         <span className="inventory-table__sku">{product.sku || "—"}</span>
                       </td>
-                      <td>{product.category || "—"}</td>
-                      <td>{unitName || "—"}</td>
-                      <td className="inventory-table__stock">
+                      <td data-label="Kategori">{product.category || "—"}</td>
+                      <td data-label="Unit usaha">{unitName || "—"}</td>
+                      <td className="inventory-table__stock" data-label="Stok">
                         {product.stock ?? "—"}{product.unit ? " " + product.unit : ""}
                       </td>
-                      <td>{formatCurrency(product.costPrice ?? product.cost)}</td>
-                      <td>{formatCurrency(product.referencePrice ?? product.price)}</td>
-                      <td>
+                      <td data-label="HPP saat ini">{formatCurrency(product.costPrice ?? product.cost)}</td>
+                      <td data-label="Harga referensi">{formatCurrency(product.referencePrice ?? product.price)}</td>
+                      <td data-label="Status">
                         {stockStatus ? (
                           <span className={"inventory-status inventory-status--" + stockStatus.tone}>
                             {stockStatus.label}
                           </span>
                         ) : "—"}
                       </td>
-                      <td><button className="inventory-edit-button" type="button" onClick={() => openProduct(product)} aria-label={"Ubah harga " + product.name}><Pencil size={15} />Ubah</button></td>
+                      <td data-label="Aksi"><div className="inventory-actions"><button className="inventory-edit-button" type="button" onClick={() => openProduct(product)} aria-label={"Ubah harga " + product.name}><Pencil size={15} />Ubah</button><button className="inventory-delete-button" type="button" onClick={() => handleDeleteProduct(product)} aria-label={"Hapus produk " + product.name} title="Hapus produk"><Trash2 size={15} /></button></div></td>
                     </tr>
                   )
                 })}

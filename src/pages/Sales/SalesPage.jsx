@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 
-import { CircleDollarSign, Pencil, Plus } from "lucide-react"
+import { CircleDollarSign, Pencil, Plus, Trash2 } from "lucide-react"
 import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
@@ -18,8 +18,9 @@ function formatCurrency(value) {
 
 const defaultBusinessUnits = [{ id: "furniture", name: "Furniture" }, { id: "electronic-1", name: "Electronic 1" }, { id: "electronic-2", name: "Electronic 2" }]
 
-function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettleTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
+function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettleTransaction, onDeleteTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [actionError, setActionError] = useState("")
   useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
   const sales = Array.isArray(data) ? data : []
   const totalSales = sales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
@@ -27,6 +28,15 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
     ["piutang", "belum lunas", "belum dibayar"].includes(String(sale.status || "").trim().toLowerCase()),
   )
   const unpaidTotal = unpaidSales.reduce((sum, sale) => sum + (Number(sale.remainingAmount ?? sale.total) || 0), 0)
+
+  async function handleDelete(sale) {
+    setActionError("")
+    if (!window.confirm("Hapus transaksi penjualan " + (sale.number || "") + "? Stok barang akan dipulihkan dan mutasi kas serta pelunasan yang terkait akan dihapus.")) return
+    try {
+      if (typeof onDeleteTransaction !== "function") throw new Error("Aksi hapus belum tersambung.")
+      await onDeleteTransaction(sale.id)
+    } catch (error) { setActionError(error?.message || "Transaksi penjualan gagal dihapus.") }
+  }
 
   const filteredSales = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -81,6 +91,8 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
           />
         </div>
 
+        {actionError && <p className="transaction-action-error" role="alert">{actionError}</p>}
+
         {filteredSales.length > 0 ? (
           <div className="sales-table-wrap">
             <table className="sales-table">
@@ -100,18 +112,18 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
               <tbody>
                 {filteredSales.map((sale) => (
                   <tr key={sale.id}>
-                    <td>
+                    <td data-label="Nomor transaksi">
                       <strong>{sale.number || "—"}</strong>
                     </td>
-                    <td>{sale.date || "—"}</td>
-                    <td>{sale.customer || "—"}</td>
-                    <td>{businessUnits.find((unit) => unit.id === sale.businessUnit)?.name || sale.businessUnit || "—"}</td>
-                    <td>{sale.paymentMethod === "Kredit" && sale.leasingProvider
+                    <td data-label="Tanggal">{sale.date || "—"}</td>
+                    <td data-label="Pelanggan">{sale.customer || "—"}</td>
+                    <td data-label="Unit usaha">{businessUnits.find((unit) => unit.id === sale.businessUnit)?.name || sale.businessUnit || "—"}</td>
+                    <td data-label="Metode pembayaran">{sale.paymentMethod === "Kredit" && sale.leasingProvider
                       ? "Kredit · " + sale.leasingProvider
                       : sale.paymentMethod === "DP" && sale.paymentChannel
                         ? "DP · " + sale.paymentChannel
                         : sale.paymentMethod || "—"}</td>
-                    <td>
+                    <td data-label="Status">
                       {sale.status ? (
                         <span
                           className={`sales-status sales-status--${String(
@@ -126,14 +138,15 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
                         "—"
                       )}
                     </td>
-                    <td className="sales-table__amount">
+                    <td className="sales-table__amount" data-label="Total">
                       {formatCurrency(sale.total)}
                     </td>
-                    <td className="sales-table__action">
+                    <td className="sales-table__action" data-label="Aksi">
                       {Number(sale.remainingAmount ?? 0) > 0 && <button className="sales-edit-button sales-edit-button--settle" type="button" onClick={() => onSettleTransaction?.(sale)} aria-label={"Catat pelunasan " + (sale.number || "")} title="Catat pelunasan"><CircleDollarSign size={16} /></button>}
                       <button className="sales-edit-button" type="button" onClick={() => onEditTransaction?.(sale)} aria-label={"Edit transaksi " + (sale.number || "") } title="Edit transaksi">
                         <Pencil size={16} />
                       </button>
+                      <button className="transaction-delete-button" type="button" onClick={() => handleDelete(sale)} aria-label={"Hapus transaksi " + (sale.number || "")} title="Hapus transaksi"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 ))}
