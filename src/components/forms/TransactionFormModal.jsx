@@ -3,6 +3,7 @@ import { Plus, Trash2 } from "lucide-react"
 
 import Button from "../common/Button"
 import Modal from "../common/Modal"
+import NumberInput from "../common/NumberInput.jsx"
 import { createId } from "../../services/dataProvider.js"
 import "./transactionFormModal.css"
 
@@ -26,6 +27,7 @@ function createBlankItem() {
     newSalePrice: "",
     quantity: "",
     unitPrice: "",
+    costPriceAtSale: "",
     discount: "0",
   }
 }
@@ -78,6 +80,7 @@ function makeInitialForm(transaction, type, products, parties) {
       newSalePrice: "",
       quantity: line.quantity == null ? "" : String(line.quantity),
       unitPrice: line.unitPrice == null ? "" : String(line.unitPrice),
+      costPriceAtSale: line.costPriceAtSale == null ? String(product?.costPrice ?? product?.cost ?? "") : String(line.costPriceAtSale),
       discount: line.discount == null ? "0" : String(line.discount),
     }
   })
@@ -175,7 +178,7 @@ function TransactionFormModal({
     setForm((current) => ({
       ...current,
       items: current.items.map((item) => item.id === itemId
-        ? { ...item, productId, productSearch: product ? product.sku + " · " + product.name : "", productPickerOpen: false, unitPrice: suggestedPrice == null ? "" : String(suggestedPrice) }
+        ? { ...item, productId, productSearch: product ? product.sku + " · " + product.name : "", productPickerOpen: false, unitPrice: suggestedPrice == null ? "" : String(suggestedPrice), costPriceAtSale: String(product?.costPrice ?? product?.cost ?? "") }
         : item),
     }))
   }
@@ -202,6 +205,7 @@ function TransactionFormModal({
         productSearch: product.sku + " · " + product.name,
         productPickerOpen: false,
         unitPrice: suggestedPrice == null ? "" : String(suggestedPrice),
+        costPriceAtSale: String(product.costPrice ?? product.cost ?? ""),
       }),
     }))
   }
@@ -277,6 +281,10 @@ function TransactionFormModal({
         setError("Harga per unit wajib diisi pada barang ke-" + (index + 1) + ".")
         return
       }
+      if (form.type === "sale" && (item.costPriceAtSale === "" || Number(item.costPriceAtSale) < 0)) {
+        setError("Modal/HPP per unit wajib diisi pada barang ke-" + (index + 1) + ".")
+        return
+      }
       if (Number(item.discount) < 0 || Number(item.discount) > Number(item.quantity) * Number(item.unitPrice)) {
         setError("Diskon barang ke-" + (index + 1) + " tidak boleh melebihi subtotal barang.")
         return
@@ -306,6 +314,7 @@ function TransactionFormModal({
         product,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
+        costPriceAtSale: form.type === "sale" ? Number(item.costPriceAtSale) : null,
         discount: Number(item.discount) || 0,
       })
     }
@@ -358,6 +367,7 @@ function TransactionFormModal({
             : line.product,
         quantity: line.quantity,
         unitPrice: line.unitPrice,
+        costPriceAtSale: line.costPriceAtSale,
         discount: line.discount,
         total: line.quantity * line.unitPrice - line.discount,
       })),
@@ -428,7 +438,7 @@ function TransactionFormModal({
             <>
               <label className="transaction-form__field">
                 <span>Nominal DP (Rp) <b>*</b></span>
-                <input type="number" min="1" step="1" value={form.downPayment} onChange={(event) => update("downPayment", event.target.value)} required disabled={hasRecordedSettlements} />
+                <NumberInput min="1" value={form.downPayment} onChange={(value) => update("downPayment", value)} required disabled={hasRecordedSettlements} />
               </label>
               <label className="transaction-form__field">
                 <span>DP diterima melalui <b>*</b></span>
@@ -531,15 +541,16 @@ function TransactionFormModal({
                       <label className="transaction-form__field"><span>Nama produk <b>*</b></span><input value={item.newProductName} onChange={(event) => updateItem(item.id, "newProductName", event.target.value)} required /></label>
                       <label className="transaction-form__field"><span>SKU baru <b>*</b></span><input value={item.newSku} onChange={(event) => updateItem(item.id, "newSku", event.target.value)} required /></label>
                       <label className="transaction-form__field"><span>Kategori</span><input list="transaction-product-categories" value={item.newCategory} onChange={(event) => updateItem(item.id, "newCategory", event.target.value)} placeholder="Pilih atau ketik kategori" /></label>
-                      <label className="transaction-form__field"><span>Harga modal patokan</span><input type="number" min="0" value={item.newCostPrice} onChange={(event) => updateItem(item.id, "newCostPrice", event.target.value)} /></label>
-                      <label className="transaction-form__field"><span>Harga jual patokan</span><input type="number" min="0" value={item.newSalePrice} onChange={(event) => updateItem(item.id, "newSalePrice", event.target.value)} /></label>
+                      <label className="transaction-form__field"><span>Harga modal patokan</span><NumberInput min="0" value={item.newCostPrice} onChange={(value) => updateItem(item.id, "newCostPrice", value)} /></label>
+                      <label className="transaction-form__field"><span>Harga jual patokan</span><NumberInput min="0" value={item.newSalePrice} onChange={(value) => updateItem(item.id, "newSalePrice", value)} /></label>
                     </div>
                   )}
                   {chosenProduct && <p className="transaction-item__sku">SKU: {chosenProduct.sku}</p>}
                   <div className="transaction-form__grid transaction-item__values">
-                    <label className="transaction-form__field"><span>Jumlah <b>*</b></span><input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(item.id, "quantity", event.target.value)} required /></label>
-                    <label className="transaction-form__field"><span>{form.type === "sale" ? "Harga jual per unit" : "Harga beli per unit"} <b>*</b></span><input type="number" min="0" step="1" value={item.unitPrice} onChange={(event) => updateItem(item.id, "unitPrice", event.target.value)} required /></label>
-                    <label className="transaction-form__field"><span>Diskon barang (Rp)</span><input type="number" min="0" step="1" value={item.discount} onChange={(event) => updateItem(item.id, "discount", event.target.value)} /></label>
+                    <label className="transaction-form__field"><span>Jumlah <b>*</b></span><NumberInput min="1" value={item.quantity} onChange={(value) => updateItem(item.id, "quantity", value)} required /></label>
+                    <label className="transaction-form__field"><span>{form.type === "sale" ? "Harga jual per unit" : "Harga beli per unit"} <b>*</b></span><NumberInput min="0" value={item.unitPrice} onChange={(value) => updateItem(item.id, "unitPrice", value)} required /></label>
+                    {form.type === "sale" && <label className="transaction-form__field"><span>Modal / HPP per unit <b>*</b></span><NumberInput min="0" value={item.costPriceAtSale} onChange={(value) => updateItem(item.id, "costPriceAtSale", value)} required />{chosenProduct && <small>HPP saat ini: {new Intl.NumberFormat("id-ID").format(chosenProduct.costPrice ?? chosenProduct.cost ?? 0)}</small>}</label>}
+                    <label className="transaction-form__field"><span>Diskon barang (Rp)</span><NumberInput min="0" value={item.discount} onChange={(value) => updateItem(item.id, "discount", value)} /></label>
                   </div>
                   <div className="transaction-item__total"><span>Subtotal barang {index + 1}</span><strong>{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(lineTotal)}</strong></div>
                 </article>

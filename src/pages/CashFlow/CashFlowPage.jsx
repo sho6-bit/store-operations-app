@@ -54,6 +54,7 @@ function CashFlowPage({ data = {}, onCreateCashEntry, onEditCashEntry, onDeleteC
 
   function actionButtons(transaction) {
     const linked = transaction.sourceTransactionId || transaction.sourceSettlementId || transaction.transactionId
+    if (transaction.sourceLoanId || transaction.sourceLoanRepaymentId) return <span className="cash-flow-loan-managed">Kelola di Pinjaman</span>
     const message = "Hapus mutasi “" + (transaction.description || transaction.category || "Kas & Bank") + "” sebesar " + formatCurrency(transaction.amount) + "?" + (linked ? String.fromCharCode(10, 10) + "Mutasi terkait transaksi lain. Yang dihapus hanya catatan mutasi; transaksi asal tetap tersimpan." : "")
     return <div className="cash-flow-row-actions">
       <button type="button" className="cash-flow-row-actions__button" onClick={() => onEditCashEntry?.(transaction)} aria-label="Edit mutasi" title="Edit mutasi"><Pencil size={16} /></button>

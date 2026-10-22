@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Download, Save, Upload, LogOut } from "lucide-react"
 import Button from "../../components/common/Button"
+import NumberInput from "../../components/common/NumberInput.jsx"
 import "./settingsPage.css"
 
 function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData, onLogout }) {
@@ -71,6 +72,7 @@ function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData, onLo
       if (!backup?.store || !requiredCollections.every((key) => Array.isArray(backup.store[key]))) {
         throw new Error("File tidak berisi cadangan Store Operations yang valid.")
       }
+      if (!Array.isArray(backup.store.loans)) backup.store.loans = []
       onRestoreData?.(backup)
       setMessage("Cadangan berhasil dipulihkan.")
       setError("")
@@ -129,7 +131,7 @@ function SettingsPage({ settings, storeData, onSaveSettings, onRestoreData, onLo
         <section className="setting-card">
           <div className="setting-card__header"><h2>Inventori</h2><p>Produk akan dianggap menipis jika stoknya mencapai batas ini atau kurang, selama stok masih di atas nol.</p></div>
           <div className="setting-fields setting-fields--single">
-            <label className="setting-field"><span>Batas stok menipis (unit)</span><input type="number" min="0" step="1" value={form.stockLowThreshold} onChange={(event) => setForm((current) => ({ ...current, stockLowThreshold: event.target.value }))} /></label>
+            <label className="setting-field"><span>Batas stok menipis (unit)</span><NumberInput min="0" value={form.stockLowThreshold} onChange={(value) => setForm((current) => ({ ...current, stockLowThreshold: value }))} /></label>
           </div>
         </section>
 

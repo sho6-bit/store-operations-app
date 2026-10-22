@@ -122,8 +122,9 @@ function ReportsPage({ data = {}, selectedBusinessUnit = "all", onBusinessUnitCh
   const costOfGoods = hasCompleteCost
     ? sum(sales.flatMap((sale) => (sale.items || []).map((item) => Number(item.costPriceAtSale) * Number(item.quantity))))
     : null
-  const operatingExpenses = sum(cash.filter((item) => item.type === "expense" && !item.sourceTransactionId && !item.sourceSettlementId && !item.transactionId && !["penjualan", "pembelian", "pelunasan penjualan"].includes(String(item.category || "").toLowerCase())).map((item) => item.amount))
-  const otherIncome = sum(cash.filter((item) => item.type === "income" && !item.sourceTransactionId && !item.sourceSettlementId && !item.transactionId && !["penjualan", "pembelian", "pelunasan penjualan"].includes(String(item.category || "").toLowerCase())).map((item) => item.amount))
+  const excludedCashCategories = ["penjualan", "pembelian", "pelunasan penjualan", "pinjaman", "pengembalian pinjaman"]
+  const operatingExpenses = sum(cash.filter((item) => item.type === "expense" && !item.sourceTransactionId && !item.sourceSettlementId && !item.transactionId && !excludedCashCategories.includes(String(item.category || "").toLowerCase())).map((item) => item.amount))
+  const otherIncome = sum(cash.filter((item) => item.type === "income" && !item.sourceTransactionId && !item.sourceSettlementId && !item.transactionId && !excludedCashCategories.includes(String(item.category || "").toLowerCase())).map((item) => item.amount))
   const grossProfit = costOfGoods === null ? null : revenue - costOfGoods
   const netProfit = grossProfit === null ? null : grossProfit - operatingExpenses + otherIncome
   const netMargin = netProfit === null || revenue <= 0 ? null : (netProfit / revenue) * 100

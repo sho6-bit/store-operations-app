@@ -7,6 +7,7 @@ const emptyStoreData = {
   sales: [],
   purchases: [],
   cashTransactions: [],
+  loans: [],
 }
 
 export function createId() {

@@ -5,6 +5,7 @@
   min-width: 0;
   color: var(--color-text-primary);
 }
+.cash-flow-loan-managed { color:var(--color-text-tertiary); font-size:11px; white-space:nowrap; }
 .cash-flow-page__header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .cash-flow-page__eyebrow { color: var(--color-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .cash-flow-page__title { margin: 7px 0 5px; color: var(--color-text-primary); font-size: clamp(24px, 3vw, 32px); line-height: 1.2; letter-spacing: -.03em; }

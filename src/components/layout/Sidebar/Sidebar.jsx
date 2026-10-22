@@ -7,6 +7,7 @@ import {
   User,
   Truck,
   WalletCards,
+  HandCoins,
   BarChart3,
   Settings,
   ChevronDown,
@@ -52,6 +53,11 @@ const navigationItems = [
     id: "cash",
     label: "Kas & Bank",
     icon: WalletCards,
+  },
+  {
+    id: "loans",
+    label: "Pinjaman",
+    icon: HandCoins,
   },
   {
     id: "reports",

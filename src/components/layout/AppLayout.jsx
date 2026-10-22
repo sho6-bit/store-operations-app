@@ -4,6 +4,7 @@ import "./appLayout.css"
 import Sidebar from "./Sidebar/Sidebar.jsx"
 import TopBar from "./Topbar/TopBar.jsx"
 import CashFlowPage from "../../pages/CashFlow/CashFlowPage.jsx"
+import LoansPage from "../../pages/Loans/LoansPage.jsx"
 import CustomersPage from "../../pages/Customers/CustomersPage.jsx"
 import DashboardPage from "../../pages/Dashboard/DashboardPage.jsx"
 import InventoryPage from "../../pages/Inventory/InventoryPage.jsx"
@@ -21,7 +22,7 @@ import { supabase } from "../../lib/supabaseClient.js"
 
 const pageTitles = {
   dashboard: "Dashboard", sales: "Penjualan", purchases: "Pembelian", inventory: "Stok",
-  customers: "Customer", suppliers: "Supplier", cash: "Kas & Bank", reports: "Laporan", settings: "Pengaturan",
+  customers: "Customer", suppliers: "Supplier", cash: "Kas & Bank", loans: "Pinjaman", reports: "Laporan", settings: "Pengaturan",
 }
 
 function sum(values) {
@@ -61,7 +62,7 @@ function AppLayout({ onLogout }) {
         const hasSavedStore = savedStore && collections.every((key) => Array.isArray(savedStore[key]))
         if (hasSavedStore) {
           if (isActive) {
-            setStore(Object.fromEntries(collections.map((key) => [key, savedStore[key]])))
+            setStore({ ...Object.fromEntries(collections.map((key) => [key, savedStore[key]])), loans: Array.isArray(savedStore.loans) ? savedStore.loans : [] })
             if (row.app_data.settings) setSettings(row.app_data.settings)
           }
         } else {
@@ -107,7 +108,7 @@ function AppLayout({ onLogout }) {
     setSettings(normalizedSettings)
   }
   function restoreBackup(backup) {
-    setStore(backup.store)
+    setStore({ ...backup.store, loans: Array.isArray(backup.store.loans) ? backup.store.loans : [] })
     if (backup.settings) setSettings(backup.settings)
   }
   function addParty(kind, party) {
@@ -229,9 +230,7 @@ function AppLayout({ onLogout }) {
         discount: item.discount,
         total: item.total,
         costPriceAtSale: payload.type === "sale"
-          ? (previousLine
-            ? previousLine.costPriceAtSale ?? null
-            : product.costPrice ?? product.cost ?? null)
+          ? item.costPriceAtSale ?? (previousLine ? previousLine.costPriceAtSale ?? null : product.costPrice ?? product.cost ?? null)
           : null,
       }
     })
@@ -374,9 +373,91 @@ function AppLayout({ onLogout }) {
     setStore((current) => ({ ...current, cashTransactions: current.cashTransactions.filter((item) => item.id !== id) }))
   }
 
+  function saveLoan(payload, existingId = null) {
+    const existing = existingId ? store.loans.find((loan) => loan.id === existingId) : null
+    if (existingId && !existing) throw new Error("Data pinjaman tidak ditemukan.")
+    const repaid = sum((existing?.repayments || []).map((payment) => payment.amount))
+    if (Number(payload.totalAmount) < repaid) throw new Error("Total pinjaman tidak boleh kurang dari jumlah yang sudah dikembalikan.")
+    const id = existing?.id || createId()
+    const allocations = payload.allocations.map((allocation) => ({ ...allocation, id: allocation.id || createId() }))
+    const loan = {
+      ...existing,
+      id,
+      borrowerName: payload.borrowerName.trim(),
+      date: payload.date,
+      note: payload.note.trim(),
+      allocations,
+      totalAmount: sum(allocations.map((allocation) => allocation.amount)),
+      repayments: existing?.repayments || [],
+    }
+    const drawMovements = allocations.map((allocation) => {
+      const account = settings.accounts[allocation.businessUnit]?.[allocation.accountType] || (allocation.accountType === "cash" ? "Kas" : "Bank")
+      const unitName = settings.businessUnits.find((unit) => unit.id === allocation.businessUnit)?.name || allocation.businessUnit
+      return {
+        id: allocation.cashTransactionId || createId(),
+        sourceLoanId: id,
+        sourceLoanAllocationId: allocation.id,
+        date: loan.date,
+        businessUnit: allocation.businessUnit,
+        accountType: allocation.accountType,
+        account,
+        type: "expense",
+        amount: Number(allocation.amount),
+        category: "Pinjaman",
+        reference: loan.borrowerName,
+        description: "Pinjaman kepada " + loan.borrowerName,
+        paymentMethod: unitName + " · " + account,
+      }
+    })
+    setStore((current) => ({
+      ...current,
+      loans: existing ? current.loans.map((item) => item.id === id ? loan : item) : [...current.loans, loan],
+      cashTransactions: [
+        ...current.cashTransactions.filter((entry) => entry.sourceLoanId !== id),
+        ...drawMovements,
+        ...current.cashTransactions.filter((entry) => entry.sourceLoanRepaymentId && loan.repayments.some((payment) => payment.id === entry.sourceLoanRepaymentId)),
+      ],
+    }))
+  }
+
+  function repayLoan(loanId, payload) {
+    const loan = store.loans.find((item) => item.id === loanId)
+    if (!loan) throw new Error("Data pinjaman tidak ditemukan.")
+    const paid = sum((loan.repayments || []).map((payment) => payment.amount))
+    const remaining = Number(loan.totalAmount) - paid
+    if (Number(payload.amount) <= 0 || Number(payload.amount) > remaining) throw new Error("Nominal pembayaran harus lebih dari nol dan tidak melebihi sisa pinjaman.")
+    const payment = { ...payload, id: createId(), amount: Number(payload.amount) }
+    const account = settings.accounts[payment.businessUnit]?.[payment.accountType] || (payment.accountType === "cash" ? "Kas" : "Bank")
+    const unitName = settings.businessUnits.find((unit) => unit.id === payment.businessUnit)?.name || payment.businessUnit
+    const movement = {
+      id: createId(), sourceLoanRepaymentId: payment.id, sourceLoanId: loanId,
+      date: payment.date, businessUnit: payment.businessUnit, accountType: payment.accountType,
+      account, type: "income", amount: payment.amount, category: "Pengembalian Pinjaman",
+      reference: loan.borrowerName, description: "Pengembalian pinjaman dari " + loan.borrowerName,
+      paymentMethod: unitName + " · " + account, note: payment.note,
+    }
+    setStore((current) => ({
+      ...current,
+      loans: current.loans.map((item) => item.id === loanId ? { ...item, repayments: [...(item.repayments || []), payment] } : item),
+      cashTransactions: [...current.cashTransactions, movement],
+    }))
+  }
+
+  function deleteLoan(id) {
+    const loan = store.loans.find((item) => item.id === id)
+    if (!loan) return
+    const repaymentIds = new Set((loan.repayments || []).map((payment) => payment.id))
+    setStore((current) => ({
+      ...current,
+      loans: current.loans.filter((item) => item.id !== id),
+      cashTransactions: current.cashTransactions.filter((entry) => entry.sourceLoanId !== id && !repaymentIds.has(entry.sourceLoanRepaymentId)),
+    }))
+  }
+
   const selectedSales = useMemo(() => store.sales.filter((item) => selectedBusinessUnit === "all" || item.businessUnit === selectedBusinessUnit), [store.sales, selectedBusinessUnit])
   const selectedPurchases = useMemo(() => store.purchases.filter((item) => selectedBusinessUnit === "all" || item.businessUnit === selectedBusinessUnit), [store.purchases, selectedBusinessUnit])
   const selectedCash = useMemo(() => store.cashTransactions.filter((item) => selectedBusinessUnit === "all" || item.businessUnit === selectedBusinessUnit), [store.cashTransactions, selectedBusinessUnit])
+  const selectedLoans = useMemo(() => (store.loans || []).filter((loan) => selectedBusinessUnit === "all" || (loan.allocations || []).some((allocation) => allocation.businessUnit === selectedBusinessUnit) || (loan.repayments || []).some((payment) => payment.businessUnit === selectedBusinessUnit)), [store.loans, selectedBusinessUnit])
 
   const dashboardData = useMemo(() => {
     const recent = [
@@ -467,6 +548,7 @@ function AppLayout({ onLogout }) {
     if (activeItem === "customers") return <CustomersPage data={store.customers} globalSearchValue={searchValue} onCreateCustomer={saveCustomer} onUpdateCustomer={updateCustomer} onDeleteCustomer={deleteCustomer} />
     if (activeItem === "suppliers") return <SuppliersPage data={store.suppliers} globalSearchValue={searchValue} onCreateSupplier={saveSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />
     if (activeItem === "cash") return <CashFlowPage data={cashPageData} globalSearchValue={searchValue} businessUnits={settings.businessUnits} onCreateCashEntry={() => { setCashEntryDraft(null); setIsCashModalOpen(true) }} onEditCashEntry={(entry) => { setCashEntryDraft(entry); setIsCashModalOpen(true) }} onDeleteCashEntry={deleteCashEntry} />
+    if (activeItem === "loans") return <LoansPage loans={selectedLoans} businessUnits={settings.businessUnits} accounts={settings.accounts} onSaveLoan={saveLoan} onRepayLoan={repayLoan} onDeleteLoan={deleteLoan} />
     if (activeItem === "reports") return <ReportsPage businessUnits={settings.businessUnits} data={reportData} selectedBusinessUnit={selectedBusinessUnit} onBusinessUnitChange={setSelectedBusinessUnit} />
     if (activeItem === "settings") return <SettingPage settings={settings} storeData={store} onSaveSettings={saveSettings} onRestoreData={restoreBackup} onLogout={onLogout} />
     return <DashboardPage businessUnits={settings.businessUnits} data={dashboardData} selectedBusinessUnit={selectedBusinessUnit} onCreateTransaction={() => setTransactionDraft({ type: "sale", record: null })} />

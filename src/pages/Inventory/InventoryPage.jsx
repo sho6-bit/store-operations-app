@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
+import NumberInput from "../../components/common/NumberInput.jsx"
 
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
@@ -30,6 +31,7 @@ function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnit
   const [monthFilter, setMonthFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState("all")
   const [unitFilter, setUnitFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: "", sku: "", category: "", costPrice: "", referencePrice: "", businessUnit: "" })
@@ -58,8 +60,20 @@ function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnit
       const matchesCategory = categoryFilter === "all" || product.category === categoryFilter
       const unitId = product.businessUnitId ?? product.businessUnit
       const matchesUnit = unitFilter === "all" || unitId === unitFilter
+      const stock = Number(product.stock)
+      const threshold = product.reorderLevel ?? product.minStock ?? stockLowThreshold
+      const status = product.stock == null || !Number.isFinite(stock)
+        ? "unknown"
+        : stock < 0
+          ? "backorder"
+          : stock === 0
+            ? "out"
+            : threshold != null && stock <= Number(threshold)
+              ? "low"
+              : "safe"
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(status)
       const created = String(product.createdAt || "")
-      return matchesQuery && matchesCategory && matchesUnit && (monthFilter === "all" || created.slice(0, 7) === monthFilter) && (yearFilter === "all" || created.slice(0, 4) === yearFilter)
+      return matchesQuery && matchesCategory && matchesUnit && matchesStatus && (monthFilter === "all" || created.slice(0, 7) === monthFilter) && (yearFilter === "all" || created.slice(0, 4) === yearFilter)
     }).sort((a, b) => {
       const aName = String(a.name || a.sku || "")
       const bName = String(b.name || b.sku || "")
@@ -72,7 +86,7 @@ function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnit
       if (sortMode === "date-desc") return bDate.localeCompare(aDate)
       return aName.localeCompare(bName, "id", { sensitivity: "base" })
     })
-  }, [products, searchTerm, categoryFilter, unitFilter, sortMode, monthFilter, yearFilter])
+  }, [products, searchTerm, categoryFilter, unitFilter, statusFilter, stockLowThreshold, sortMode, monthFilter, yearFilter])
 
   function openProduct(product = null) {
     setEditing(product)
@@ -156,6 +170,18 @@ function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnit
               {businessUnits.map((unit) => <option value={unit.id} key={unit.id}>{unit.name}</option>)}
             </select>
           </label>
+          <details className="inventory-status-filter">
+            <summary>{statusFilter.length ? statusFilter.length + " status dipilih" : "Semua status"}</summary>
+            <div className="inventory-status-filter__menu">
+              <label><input type="checkbox" checked={statusFilter.length === 0} onChange={() => setStatusFilter([])} />Semua status</label>
+              {[
+                ["safe", "Stok aman"],
+                ["low", "Stok menipis"],
+                ["out", "Stok habis"],
+                ["backorder", "Stok minus / pre-order"],
+              ].map(([value, label]) => <label key={value}><input type="checkbox" checked={statusFilter.includes(value)} onChange={(event) => setStatusFilter((current) => { const next = event.target.checked ? [...current, value] : current.filter((status) => status !== value); return next.length === 4 ? [] : next })} />{label}</label>)}
+            </div>
+          </details>
           <div className="inventory-sort-controls">
             <label><span className="sr-only">Urutkan produk</span><select value={sortMode} onChange={(event) => setSortMode(event.target.value)}><option value="name-asc">Nama A–Z</option><option value="name-desc">Nama Z–A</option><option value="date-desc">Produk terbaru</option><option value="date-asc">Produk terlama</option><option value="month-desc">Bulan terbaru</option><option value="year-desc">Tahun terbaru</option></select></label>
             <label><span className="sr-only">Filter bulan produk dibuat</span><select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}><option value="all">Semua bulan</option>{availableMonths.map((month) => <option key={month} value={month}>{new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date(month + "-01T00:00:00"))}</option>)}</select></label>
@@ -214,9 +240,9 @@ function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnit
           </div>
         ) : (
           <div className="inventory-empty">
-            <strong>{searchTerm || categoryFilter !== "all" || unitFilter !== "all" ? "Produk tidak ditemukan" : "Belum ada data produk"}</strong>
+            <strong>{searchTerm || categoryFilter !== "all" || unitFilter !== "all" || statusFilter.length ? "Produk tidak ditemukan" : "Belum ada data produk"}</strong>
             <span>
-              {searchTerm || categoryFilter !== "all" || unitFilter !== "all"
+              {searchTerm || categoryFilter !== "all" || unitFilter !== "all" || statusFilter.length
                 ? "Sesuaikan pencarian atau filter."
                 : "Daftar produk akan tampil di sini setelah data inventaris tersedia."}
             </span>
@@ -236,8 +262,8 @@ function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnit
             <label className="transaction-form__field"><span>Kategori</span><input list="inventory-product-categories" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} placeholder="Pilih atau ketik kategori" /></label>
             <datalist id="inventory-product-categories">{categories.map((category) => <option key={category} value={category} />)}</datalist>
             <label className="transaction-form__field"><span>Unit usaha <b>*</b></span><select required value={form.businessUnit} onChange={(event) => setForm({ ...form, businessUnit: event.target.value })}><option value="">Pilih unit usaha</option>{businessUnits.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>
-            <label className="transaction-form__field"><span>Harga modal patokan (Rp) <b>*</b></span><input type="number" min="0" required value={form.costPrice} onChange={(event) => setForm({ ...form, costPrice: event.target.value })} /></label>
-            <label className="transaction-form__field transaction-form__field--wide"><span>Harga jual patokan (Rp) <b>*</b></span><input type="number" min="0" required value={form.referencePrice} onChange={(event) => setForm({ ...form, referencePrice: event.target.value })} /></label>
+            <label className="transaction-form__field"><span>Harga modal patokan (Rp) <b>*</b></span><NumberInput min="0" required value={form.costPrice} onChange={(value) => setForm({ ...form, costPrice: value })} /></label>
+            <label className="transaction-form__field transaction-form__field--wide"><span>Harga jual patokan (Rp) <b>*</b></span><NumberInput min="0" required value={form.referencePrice} onChange={(value) => setForm({ ...form, referencePrice: value })} /></label>
           </div>
           <p className="transaction-form__hint">Harga patokan dapat diubah kembali melalui tombol Ubah pada baris produk.</p>
           {formError && <p className="transaction-form__error" role="alert">{formError}</p>}

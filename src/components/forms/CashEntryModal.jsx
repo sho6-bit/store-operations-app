@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Plus } from "lucide-react"
 import Button from "../common/Button"
 import Modal from "../common/Modal"
+import NumberInput from "../common/NumberInput.jsx"
 import "./transactionFormModal.css"
 
 const defaultBusinessUnits = [{ id: "furniture", name: "Furniture" }, { id: "electronic-1", name: "Electronic 1" }, { id: "electronic-2", name: "Electronic 2" }]
@@ -54,7 +55,7 @@ function CashEntryModal({ isOpen, onClose, onSave, businessUnits = defaultBusine
           <label className="transaction-form__field"><span>Tanggal <b>*</b></span><input type="date" required value={form.date} onChange={(event) => update("date", event.target.value)} /></label>
           <label className="transaction-form__field"><span>Unit usaha <b>*</b></span><select required value={form.businessUnit} onChange={(event) => update("businessUnit", event.target.value)}><option value="">Pilih unit usaha</option>{businessUnits.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>
           <label className="transaction-form__field"><span>Akun <b>*</b></span><select value={form.accountType} onChange={(event) => update("accountType", event.target.value)}><option value="cash">Kas</option><option value="bank">Bank</option></select></label>
-          <label className="transaction-form__field"><span>Jumlah (Rp) <b>*</b></span><input type="number" min="1" step="1" required value={form.amount} onChange={(event) => update("amount", event.target.value)} /></label>
+          <label className="transaction-form__field"><span>Jumlah (Rp) <b>*</b></span><NumberInput min="1" required value={form.amount} onChange={(value) => update("amount", value)} /></label>
           <label className="transaction-form__field"><span>Kategori</span><input value={form.category} placeholder="Contoh: operasional" onChange={(event) => update("category", event.target.value)} /></label>
           <label className="transaction-form__field transaction-form__field--wide"><span>Keterangan <b>*</b></span><input required value={form.description} placeholder="Keterangan transaksi kas" onChange={(event) => update("description", event.target.value)} /></label>
         </div>
