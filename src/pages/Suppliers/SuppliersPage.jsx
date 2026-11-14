@@ -7,6 +7,7 @@ import SummaryCards from "../../components/common/SummaryCards"
 import "./suppliersPage.css"
 
 const emptyForm = { name: "", address: "", phone: "" }
+const emptyArray = []
 
 function SuppliersPage({ data = [], onCreateSupplier, onUpdateSupplier, onDeleteSupplier, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
@@ -17,7 +18,7 @@ function SuppliersPage({ data = [], onCreateSupplier, onUpdateSupplier, onDelete
   const [formError, setFormError] = useState("")
   const [actionError, setActionError] = useState("")
   const [isSaving, setIsSaving] = useState(false)
-  const suppliers = Array.isArray(data) ? data : []
+  const suppliers = Array.isArray(data) ? data : emptyArray
 
   const suppliersWithPhone = suppliers.filter((supplier) => supplier.phone).length
   const suppliersWithAddress = suppliers.filter((supplier) => supplier.address).length

@@ -8,6 +8,7 @@ import {
 
 import Button from "../../components/common/Button"
 import StatCard from "../../components/common/StatCard"
+import { formatCurrency } from "../../utils/formatters.js"
 import "./dashboardPage.css"
 
 const defaultUnitNames = {
@@ -15,15 +16,6 @@ const defaultUnitNames = {
   furniture: "Furniture",
   "electronic-1": "Electronic 1",
   "electronic-2": "Electronic 2",
-}
-
-function formatCurrency(value) {
-  if (value === null || value === undefined) return "—"
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value)
 }
 
 function DashboardPage({ data, selectedBusinessUnit, onCreateTransaction, businessUnits = Object.entries(defaultUnitNames).filter(([id]) => id !== "all").map(([id, name]) => ({ id, name })) }) {

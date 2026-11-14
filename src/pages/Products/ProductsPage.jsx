@@ -1,21 +1,14 @@
 import { useMemo, useState } from "react"
 
 import SearchInput from "../../components/common/SearchInput"
+import { formatCurrency } from "../../utils/formatters.js"
 import "./productsPage.css"
 
-function formatCurrency(value) {
-  if (value === null || value === undefined) return "—"
-
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+const emptyArray = []
 
 function ProductsPage({ data = [] }) {
   const [searchTerm, setSearchTerm] = useState("")
-  const products = Array.isArray(data) ? data : []
+  const products = Array.isArray(data) ? data : emptyArray
 
   const filteredProducts = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()

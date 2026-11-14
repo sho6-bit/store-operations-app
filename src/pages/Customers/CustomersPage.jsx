@@ -14,6 +14,7 @@ const emptyForm = {
   email: "",
   address: "",
 }
+const emptyArray = []
 
 function CustomerPage({
   data = [],
@@ -31,7 +32,7 @@ function CustomerPage({
   const [isSaving, setIsSaving] = useState(false)
   const [actionError, setActionError] = useState("")
 
-  const customers = Array.isArray(data) ? data : []
+  const customers = Array.isArray(data) ? data : emptyArray
   const customersWithPhone = customers.filter((customer) => customer.phone).length
   const customersWithEmail = customers.filter((customer) => customer.email).length
 

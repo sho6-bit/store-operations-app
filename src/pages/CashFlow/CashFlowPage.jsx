@@ -3,6 +3,7 @@ import { ArrowDownLeft, ArrowUpRight, History, Landmark, Pencil, Plus, Trash2, W
 import Button from "../../components/common/Button"
 import Modal from "../../components/common/Modal"
 import SearchInput from "../../components/common/SearchInput"
+import { formatCurrencyOrDash as formatCurrency } from "../../utils/formatters.js"
 import "./cashFlowPage.css"
 
 const defaultBusinessUnits = [
@@ -10,15 +11,7 @@ const defaultBusinessUnits = [
   { id: "electronic-1", name: "Electronic 1" },
   { id: "electronic-2", name: "Electronic 2" },
 ]
-
-function formatCurrency(value) {
-  if (value === null || value === undefined || value === "") return "—"
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+const emptyArray = []
 
 function CashFlowPage({ data = {}, onCreateCashEntry, onEditCashEntry, onDeleteCashEntry, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
@@ -26,8 +19,8 @@ function CashFlowPage({ data = {}, onCreateCashEntry, onEditCashEntry, onDeleteC
   const [typeFilter, setTypeFilter] = useState("all")
   const [selectedAccount, setSelectedAccount] = useState(null)
   const summary = data?.summary ?? {}
-  const transactions = Array.isArray(data?.transactions) ? data.transactions : []
-  const accounts = Array.isArray(data?.accounts) ? data.accounts : []
+  const transactions = Array.isArray(data?.transactions) ? data.transactions : emptyArray
+  const accounts = Array.isArray(data?.accounts) ? data.accounts : emptyArray
 
   const filteredTransactions = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()

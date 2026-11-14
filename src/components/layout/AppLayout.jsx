@@ -258,7 +258,9 @@ function AppLayout({ onLogout }) {
       remainingAmount: Math.max(0, total - paidAmount),
       note: payload.note || "",
       settlements: existingSettlements,
-      items: lineItems.map(({ product, ...item }) => item),
+      items: lineItems.map((item) => Object.fromEntries(
+        Object.entries(item).filter(([key]) => key !== "product"),
+      )),
       total,
       status: isBusinessDebt ? "Hutang" : payload.type === "sale" && paidAmount < total ? "Piutang" : "Lunas",
     }

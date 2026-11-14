@@ -7,6 +7,7 @@ import { Directory, Filesystem } from "@capacitor/filesystem"
 import { Share } from "@capacitor/share"
 import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
+import { formatCurrencyOrDash as formatCurrency } from "../../utils/formatters.js"
 import "./reportsPage.css"
 
 const defaultBusinessUnits = [
@@ -23,15 +24,7 @@ const reportTabs = [
   { id: "cash-flow", label: "Arus Kas" },
   { id: "inventory", label: "Inventori" },
 ]
-
-function formatCurrency(value) {
-  if (value === null || value === undefined || value === "") return "—"
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+const emptyArray = []
 
 function formatPercent(value) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—"
@@ -107,10 +100,10 @@ function ReportsPage({ data = {}, selectedBusinessUnit = "all", onBusinessUnitCh
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const query = searchTerm.trim().toLowerCase()
-  const allSales = Array.isArray(data.sales) ? data.sales : []
-  const allPurchases = Array.isArray(data.purchases) ? data.purchases : []
-  const allCash = Array.isArray(data.cashTransactions) ? data.cashTransactions : []
-  const products = Array.isArray(data.products) ? data.products : []
+  const allSales = Array.isArray(data.sales) ? data.sales : emptyArray
+  const allPurchases = Array.isArray(data.purchases) ? data.purchases : emptyArray
+  const allCash = Array.isArray(data.cashTransactions) ? data.cashTransactions : emptyArray
+  const products = Array.isArray(data.products) ? data.products : emptyArray
   const sales = useMemo(() => allSales.filter((item) => isWithinPeriod(item.date, startDate, endDate)), [allSales, startDate, endDate])
   const purchases = useMemo(() => allPurchases.filter((item) => isWithinPeriod(item.date, startDate, endDate)), [allPurchases, startDate, endDate])
   const cash = useMemo(() => allCash.filter((item) => isWithinPeriod(item.date, startDate, endDate)), [allCash, startDate, endDate])
@@ -235,10 +228,10 @@ function ReportsPage({ data = {}, selectedBusinessUnit = "all", onBusinessUnitCh
         addTable(["Unit usaha", "Penjualan", "Kontribusi"], salesByUnit.map((unit) => [unit.label, formatCurrency(unit.amount), formatPercent(unit.percent)]), { columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } } })
       }
     } else {
-      let metrics = []
-      let detailHead = []
-      let detailRows = []
-      let rightAligned = []
+      let metrics
+      let detailHead
+      let detailRows
+      let rightAligned
       if (activeTab === "sales") {
         metrics = [["Total penjualan", formatCurrency(revenue), sales.length + " transaksi"], ["Piutang aktif", formatCurrency(sum(sales.map((sale) => Number(sale.remainingAmount || 0)))), "Sisa tagihan pelanggan"], ["Rata-rata transaksi", sales.length ? formatCurrency(revenue / sales.length) : formatCurrency(0), "Penjualan dibagi jumlah transaksi"]]
         detailHead = ["Invoice", "Tanggal", "Pelanggan", "Unit usaha", "Pembayaran", "Status", "Total"]

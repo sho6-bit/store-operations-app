@@ -6,6 +6,7 @@ import NumberInput from "../../components/common/NumberInput.jsx"
 
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
+import { formatCurrencyOrDash as formatCurrency } from "../../utils/formatters.js"
 import "./inventoryPage.css"
 
 const defaultBusinessUnits = [
@@ -13,15 +14,7 @@ const defaultBusinessUnits = [
   { id: "electronic-1", name: "Electronic 1" },
   { id: "electronic-2", name: "Electronic 2" },
 ]
-
-function formatCurrency(value) {
-  if (value === null || value === undefined || value === "") return "—"
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+const emptyArray = []
 
 function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnits = defaultBusinessUnits, stockLowThreshold = 1, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
@@ -37,7 +30,7 @@ function InventoryPage({ data = [], onSaveProduct, onDeleteProduct, businessUnit
   const [form, setForm] = useState({ name: "", sku: "", category: "", costPrice: "", referencePrice: "", businessUnit: "" })
   const [formError, setFormError] = useState("")
   const [actionError, setActionError] = useState("")
-  const products = Array.isArray(data) ? data : []
+  const products = Array.isArray(data) ? data : emptyArray
 
   const categories = [...new Set(products.map((product) => product.category).filter(Boolean))]
   const availableYears = [...new Set(products.map((product) => String(product.createdAt || "").slice(0, 4)).filter((value) => /^\d{4}$/.test(value)))].sort((a, b) => b.localeCompare(a))

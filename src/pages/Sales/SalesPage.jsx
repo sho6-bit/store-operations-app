@@ -4,19 +4,11 @@ import { CircleDollarSign, Pencil, Plus, Trash2 } from "lucide-react"
 import Button from "../../components/common/Button"
 import SearchInput from "../../components/common/SearchInput"
 import SummaryCards from "../../components/common/SummaryCards"
+import { formatCurrency } from "../../utils/formatters.js"
 import "./salesPage.css"
 
-function formatCurrency(value) {
-  if (value === null || value === undefined) return "—"
-
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
-
 const defaultBusinessUnits = [{ id: "furniture", name: "Furniture" }, { id: "electronic-1", name: "Electronic 1" }, { id: "electronic-2", name: "Electronic 2" }]
+const emptyArray = []
 
 function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettleTransaction, onDeleteTransaction, businessUnits = defaultBusinessUnits, globalSearchValue = "" }) {
   const [searchTerm, setSearchTerm] = useState("")
@@ -25,7 +17,7 @@ function SalesPage({ data = [], onCreateTransaction, onEditTransaction, onSettle
   const [yearFilter, setYearFilter] = useState("all")
   const [actionError, setActionError] = useState("")
   useEffect(() => { setSearchTerm(globalSearchValue) }, [globalSearchValue])
-  const sales = Array.isArray(data) ? data : []
+  const sales = Array.isArray(data) ? data : emptyArray
   const totalSales = sales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0)
   const unpaidSales = sales.filter((sale) =>
     ["piutang", "belum lunas", "belum dibayar"].includes(String(sale.status || "").trim().toLowerCase()),
